@@ -12,10 +12,10 @@ cd fx-signal-copier
 
 ##### 2. Create virtual environment
 ```
-python -m venv venv
+python -m venv fx
 ```
 ```
-source venv/bin/activate
+source fx/bin/activate
 ```
 ##### On Windows:
 ```
