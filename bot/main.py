@@ -94,10 +94,14 @@ class Bot:
         reg_conv = ConversationHandler(
             entry_points=[CommandHandler("register", self.registration.start)],
             states=self.registration.get_states(),
-            fallbacks=[CommandHandler("cancel", self.registration.cancel)],
+            fallbacks=[
+                CommandHandler("cancel", self.registration.cancel),
+                CommandHandler("register", self.registration.start),  # allow restart
+            ],
             name="registration",
             persistent=True,
             per_message=False,
+            allow_reentry=True,
         )
         app.add_handler(reg_conv)
 
@@ -105,10 +109,14 @@ class Bot:
         trade_conv = ConversationHandler(
             entry_points=[CommandHandler("trade", self.auth_middleware.wrap(self.trading.start_trade))],
             states=self.trading.get_states(),
-            fallbacks=[CommandHandler("cancel", self.trading.cancel)],
+            fallbacks=[
+                CommandHandler("cancel", self.trading.cancel),
+                CommandHandler("trade", self.auth_middleware.wrap(self.trading.start_trade)),
+            ],
             name="trading",
             persistent=True,
             per_message=False,
+            allow_reentry=True,
         )
         app.add_handler(trade_conv)
 
@@ -116,10 +124,14 @@ class Bot:
         calc_conv = ConversationHandler(
             entry_points=[CommandHandler("calculate", self.auth_middleware.wrap(self.trading.start_calculate))],
             states=self.trading.get_states(),
-            fallbacks=[CommandHandler("cancel", self.trading.cancel)],
+            fallbacks=[
+                CommandHandler("cancel", self.trading.cancel),
+                CommandHandler("calculate", self.auth_middleware.wrap(self.trading.start_calculate)),
+            ],
             name="calculate",
             persistent=True,
             per_message=False,
+            allow_reentry=True,
         )
         app.add_handler(calc_conv)
 
@@ -127,10 +139,14 @@ class Bot:
         settings_conv = ConversationHandler(
             entry_points=[CommandHandler("settings", self.auth_middleware.wrap(self.settings_handler.start))],
             states=self.settings_handler.get_states(),
-            fallbacks=[CommandHandler("cancel", self.settings_handler.cancel)],
+            fallbacks=[
+                CommandHandler("cancel", self.settings_handler.cancel),
+                CommandHandler("settings", self.auth_middleware.wrap(self.settings_handler.start)),
+            ],
             name="settings",
             persistent=True,
             per_message=False,
+            allow_reentry=True,
         )
         app.add_handler(settings_conv)
 

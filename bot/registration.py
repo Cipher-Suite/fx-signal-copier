@@ -34,7 +34,10 @@ class RegistrationHandler:
     async def start(self, update: Update, context: CallbackContext) -> int:
         """Start the registration process"""
         user = update.effective_user
-        
+
+        # Clear any stale conversation state from a previous interrupted session
+        context.user_data.clear()
+
         # Check if already registered
         existing = self.user_repo.get_by_telegram_id(user.id)
         if existing:
