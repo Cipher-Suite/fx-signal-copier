@@ -11,7 +11,7 @@ from services.trade_executor import TradeExecutor
 from services.mt5_manager import MT5ConnectionManager
 from services.risk_service import RiskService
 from services.subscription import SubscriptionService
-from bot.keyboards import get_trade_confirmation_keyboard, get_risk_modification_keyboard
+from bot.keyboards import get_trade_confirmation_keyboard
 from utils.formatters import format_trade_calculation, format_positions, format_balance
 
 logger = logging.getLogger(__name__)
