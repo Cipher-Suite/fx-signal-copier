@@ -17,16 +17,6 @@ logger = logging.getLogger(__name__)
 (ENTER_ACCOUNT, ENTER_PASSWORD, ENTER_SERVER, 
  CONFIRM_CREDENTIALS, VERIFYING, COMPLETE) = range(6)
 
-REGISTRATION_STATES = {
-    ENTER_ACCOUNT: [MessageHandler(filters.TEXT & ~filters.COMMAND, RegistrationHandler.receive_account)],
-    ENTER_PASSWORD: [MessageHandler(filters.TEXT & ~filters.COMMAND, RegistrationHandler.receive_password)],
-    ENTER_SERVER: [MessageHandler(filters.TEXT & ~filters.COMMAND, RegistrationHandler.receive_server)],
-    CONFIRM_CREDENTIALS: [CallbackQueryHandler(RegistrationHandler.confirm_credentials, pattern='^confirm_')],
-    VERIFYING: [],  # No input while verifying
-    COMPLETE: [MessageHandler(filters.TEXT, RegistrationHandler.complete)],
-}
-
-
 class RegistrationHandler:
     """
     Handles user registration flow
@@ -305,3 +295,14 @@ class RegistrationHandler:
         context.user_data.clear()
         
         return ConversationHandler.END
+
+
+# Defined after class so RegistrationHandler is in scope
+REGISTRATION_STATES = {
+    ENTER_ACCOUNT: [MessageHandler(filters.TEXT & ~filters.COMMAND, RegistrationHandler.receive_account)],
+    ENTER_PASSWORD: [MessageHandler(filters.TEXT & ~filters.COMMAND, RegistrationHandler.receive_password)],
+    ENTER_SERVER: [MessageHandler(filters.TEXT & ~filters.COMMAND, RegistrationHandler.receive_server)],
+    CONFIRM_CREDENTIALS: [CallbackQueryHandler(RegistrationHandler.confirm_credentials, pattern='^confirm_')],
+    VERIFYING: [],  # No input while verifying
+    COMPLETE: [MessageHandler(filters.TEXT, RegistrationHandler.complete)],
+}
