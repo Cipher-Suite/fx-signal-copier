@@ -22,13 +22,13 @@ class RegistrationHandler:
     Handles user registration flow
     """
     
-    def __init__(self, db_session: Session, bot):
+    def __init__(self, db_session: Session, bot, mt5_manager=None):
         self.db = db_session
         self.bot = bot
         self.user_repo = UserRepository(db_session)
         self.auth_service = AuthService(db_session)
         self.encryption = EncryptionService()
-        self.mt5_manager = MT5ConnectionManager(db_session)
+        self.mt5_manager = mt5_manager
         self.notification = NotificationService(db_session, bot)
     
     async def start(self, update: Update, context: CallbackContext) -> int:

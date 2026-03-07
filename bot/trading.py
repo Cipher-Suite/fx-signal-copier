@@ -24,12 +24,12 @@ class TradingHandler:
     Handles trading conversations
     """
     
-    def __init__(self, db_session: Session, bot):
+    def __init__(self, db_session: Session, bot, mt5_manager=None):
         self.db = db_session
         self.bot = bot
         self.user_repo = UserRepository(db_session)
-        self.trade_executor = TradeExecutor(db_session, bot)
-        self.mt5_manager = MT5ConnectionManager(db_session)
+        self.trade_executor = TradeExecutor(db_session, bot, mt5_manager=mt5_manager)
+        self.mt5_manager = mt5_manager
         self.risk_service = RiskService()
         self.sub_service = SubscriptionService(db_session)
         

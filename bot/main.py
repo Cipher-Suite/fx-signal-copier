@@ -44,8 +44,8 @@ class Bot:
 
         # Initialize all handler objects synchronously — no async needed yet
         self.command_handlers = CommandHandlers(self.db, None)   # bot set after build
-        self.registration     = RegistrationHandler(self.db, None)
-        self.trading          = TradingHandler(self.db, None)
+        self.registration     = RegistrationHandler(self.db, None, mt5_manager=None)
+        self.trading          = TradingHandler(self.db, None, mt5_manager=None)
         self.settings_handler = SettingsHandler(self.db, None)
         self.admin            = AdminHandler(self.db, None)
         self.auth_middleware  = AuthMiddleware(self.db)
@@ -159,6 +159,12 @@ class Bot:
         # MetaApi requires a running event loop
         self.mt5_manager = MT5ConnectionManager(self.db)
         await self.mt5_manager.start()
+
+        # Inject shared mt5_manager into handlers that need it
+        self.registration.mt5_manager = self.mt5_manager
+        self.trading.mt5_manager = self.mt5_manager
+        if hasattr(self.trading, 'trade_executor') and self.trading.trade_executor:
+            self.trading.trade_executor.mt5_manager = self.mt5_manager
 
         # Set bot commands
         await self.bot.set_my_commands([
