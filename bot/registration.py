@@ -9,7 +9,7 @@ from database.repositories import UserRepository
 from services.auth import AuthService, EncryptionService
 from services.mt5_manager import MT5ConnectionManager
 from services.notification import NotificationService
-from utils.validators import validate_mt5_server, validate_account_id
+from utils.validators import validate_mt5_server, validate_mt5_account
 
 logger = logging.getLogger(__name__)
 
