@@ -170,7 +170,7 @@ class ErrorHandler:
         self.notification = notification_service
         self.monitoring = monitoring_service
     
-    async def handle(update, context) -> None:
+    async def handle(self, update, context) -> None:
         """
         Handle errors raised in dispatcher
         """
@@ -190,7 +190,7 @@ class ErrorHandler:
         # Notify user
         try:
             if update and update.effective_message:
-                update.effective_message.reply_text(
+                await update.effective_message.reply_text(
                     "❌ An error occurred while processing your request.\n"
                     "Our team has been notified and will look into it."
                 )
