@@ -2,14 +2,14 @@
 import logging
 from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.constants import ParseMode
-from telegram.ext import ConversationHandler, CallbackContext
+from telegram.ext import ConversationHandler, CallbackContext, MessageHandler, Filters, CallbackQueryHandler
 from sqlalchemy.orm import Session
 
 from database.repositories import UserRepository
 from services.auth import AuthService, EncryptionService
 from services.mt5_manager import MT5ConnectionManager
 from services.notification import NotificationService
-from utils.validators import validate_mt5_server, validate_mt5_account
+from core.validators import CredentialsValidator
 
 logger = logging.getLogger(__name__)
 
@@ -74,8 +74,8 @@ class RegistrationHandler:
         """Receive and validate account ID"""
         account_id = update.message.text.strip()
         
-        # Validate format
-        is_valid, error = validate_account_id(account_id)
+        # Validate format using CredentialsValidator
+        is_valid, error = CredentialsValidator.validate_account_id(account_id)
         if not is_valid:
             update.message.reply_text(f"❌ {error}\nPlease try again:")
             return ENTER_ACCOUNT
