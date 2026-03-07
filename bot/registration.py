@@ -163,7 +163,7 @@ class RegistrationHandler:
         encrypted_password = self.encryption.encrypt(password)
         
         # Attempt connection
-        success, message = self.mt5_manager.connect_user(
+        success, message = await self.mt5_manager.connect_user(
             user_id=user_id,
             mt5_account=account,
             mt5_password=encrypted_password,

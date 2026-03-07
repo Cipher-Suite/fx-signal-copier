@@ -254,7 +254,7 @@ class TradingHandler:
         if action == 'execute':
             # Execute the trade
             await query.edit_message_text("🔄 Executing trade...")
-            return self._execute_trade(update, context)
+            return await self._execute_trade(update, context)
         
         elif action == 'adjust':
             # Adjust risk
