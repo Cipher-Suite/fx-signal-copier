@@ -7,7 +7,6 @@ from contextlib import asynccontextmanager
 import time
 
 from metaapi_cloud_sdk import MetaApi
-# REMOVE THIS LINE: from metaapi_cloud_sdk.clients.metaApiWebsocket_client import MetaApiWebsocketClient
 from sqlalchemy.orm import Session
 
 from database.repositories import UserRepository, ConnectionLogRepository
@@ -220,12 +219,13 @@ class MT5ConnectionManager:
         except Exception as e:
             logger.error(f"Failed to connect user {user_id}: {e}")
             
-            # Update user's connection status
+            # Update user's connection status (only if user row exists)
+            existing_user = self.user_repo.get_by_telegram_id(user_id)
             self.user_repo.update_user(
                 user_id,
                 mt_connected=False,
                 connection_error=str(e)[:200],
-                connection_attempts=self.user_repo.get_by_telegram_id(user_id).connection_attempts + 1
+                connection_attempts=(existing_user.connection_attempts + 1) if existing_user else 1
             )
             
             # Log failed connection
