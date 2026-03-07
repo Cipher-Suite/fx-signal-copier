@@ -27,7 +27,7 @@ class TradeExecutor:
     Orchestrates the entire trade execution process
     """
     
-    def __init__(self, db_session: Session, bot=None):
+    def __init__(self, db_session: Session, bot=None, mt5_manager=None):
         self.db = db_session
         self.bot = bot
         
