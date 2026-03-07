@@ -572,7 +572,7 @@ class SignalEnricher:
             'total_reward': total_reward
         }
     
-    def add_market_info(self, signal: TradeSymbol, market_data: Dict[str, Any]) -> Dict[str, Any]:
+    def add_market_info(self, signal: TradeSignal, market_data: Dict[str, Any]) -> Dict[str, Any]:  # Fixed here
         """Add market information to signal"""
         return {
             'current_price': market_data.get('price'),
