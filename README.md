@@ -17,7 +17,7 @@ python -m venv venv
 ```
 source venv/bin/activate
 ```
-####$ On Windows:
+##### On Windows:
 ```
 venv\Scripts\activate
 ```
@@ -62,7 +62,7 @@ python main.py
 
 #### Option B: Docker Deployment
 
-``bash
+###### bash
 # 1. Clone and setup
 git clone https://github.com/yourusername/fx-signal-copier.git
 cd fx-signal-copier
@@ -301,61 +301,5 @@ Performance:
 · Set up database indexes
 · Enable database query logging in development
 
-7. Quick Start Script
-
-Create scripts/quick_start.sh:
-
-```bash
-#!/bin/bash
-echo "🚀 FX Signal Copier Quick Start"
-echo "================================"
-
-# Check Python version
-python_version=$(python3 --version 2>&1 | grep -Po '(?<=Python )\d+\.\d+')
-if (( $(echo "$python_version < 3.9" | bc -l) )); then
-    echo "❌ Python 3.9+ required"
-    exit 1
-fi
-echo "✅ Python $python_version"
-
-# Create virtual environment
-if [ ! -d "venv" ]; then
-    echo "📦 Creating virtual environment..."
-    python3 -m venv venv
-fi
-source venv/bin/activate
-
-# Install dependencies
-echo "📦 Installing dependencies..."
-pip install -r requirements.txt
-
-# Check .env file
-if [ ! -f ".env" ]; then
-    echo "⚠️  Creating .env from template..."
-    cp .env.example .env
-    echo "❌ Please edit .env with your credentials"
-    exit 1
-fi
-
-# Check database
-echo "🗄️  Starting database..."
-docker-compose up -d postgres redis
-sleep 5
-
-# Run migrations
-echo "🔄 Running migrations..."
-alembic upgrade head
-
-# Start bot
-echo "🤖 Starting bot..."
-python main.py
-```
-
-Make it executable:
-
-```bash
-chmod +x scripts/quick_start.sh
-./scripts/quick_start.sh
-```
 
 Now you're ready to run your FX Signal Copier bot! 🚀
