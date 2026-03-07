@@ -33,15 +33,30 @@ class BaseRepository:
             logger.error(f"Database commit error: {e}")
             raise
 
+    def _safe_query(self, query_fn):
+        """Execute a query, recovering from broken transaction state"""
+        try:
+            return query_fn()
+        except Exception as e:
+            # Session may be in a failed transaction - rollback and retry once
+            try:
+                self.session.rollback()
+                return query_fn()
+            except Exception as retry_err:
+                logger.error(f"Database query failed after rollback: {retry_err}")
+                raise
+
 
 class UserRepository(BaseRepository):
     """Repository for User operations"""
     
     def get_by_telegram_id(self, telegram_id: int) -> Optional[User]:
         """Get user by Telegram ID"""
-        return self.session.query(User).filter(
-            User.telegram_id == telegram_id
-        ).first()
+        return self._safe_query(
+            lambda: self.session.query(User).filter(
+                User.telegram_id == telegram_id
+            ).first()
+        )
     
     def get_by_uuid(self, uuid: str) -> Optional[User]:
         """Get user by UUID"""
