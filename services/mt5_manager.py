@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 import time
 
 from metaapi_cloud_sdk import MetaApi
-from metaapi_cloud_sdk.clients.metaApiWebsocket_client import MetaApiWebsocketClient
+# REMOVE THIS LINE: from metaapi_cloud_sdk.clients.metaApiWebsocket_client import MetaApiWebsocketClient
 from sqlalchemy.orm import Session
 
 from database.repositories import UserRepository, ConnectionLogRepository
