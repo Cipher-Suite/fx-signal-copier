@@ -143,7 +143,7 @@ class RegistrationHandler:
             )
             
             # Start verification
-            return self._verify_credentials(update, context)
+            return await self._verify_credentials(update, context)
         else:
             await query.edit_message_text(
                 "❌ Registration cancelled. Use /register to start over."
