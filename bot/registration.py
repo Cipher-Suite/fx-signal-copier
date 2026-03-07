@@ -2,7 +2,7 @@
 import logging
 from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.constants import ParseMode
-from telegram.ext import ConversationHandler, CallbackContext, MessageHandler, Filters, CallbackQueryHandler
+from telegram.ext import ConversationHandler, CallbackContext, MessageHandler, filters, CallbackQueryHandler
 from sqlalchemy.orm import Session
 
 from database.repositories import UserRepository
@@ -18,12 +18,12 @@ logger = logging.getLogger(__name__)
  CONFIRM_CREDENTIALS, VERIFYING, COMPLETE) = range(6)
 
 REGISTRATION_STATES = {
-    ENTER_ACCOUNT: [MessageHandler(Filters.text & ~Filters.command, RegistrationHandler.receive_account)],
-    ENTER_PASSWORD: [MessageHandler(Filters.text & ~Filters.command, RegistrationHandler.receive_password)],
-    ENTER_SERVER: [MessageHandler(Filters.text & ~Filters.command, RegistrationHandler.receive_server)],
+    ENTER_ACCOUNT: [MessageHandler(filters.TEXT & ~filters.COMMAND, RegistrationHandler.receive_account)],
+    ENTER_PASSWORD: [MessageHandler(filters.TEXT & ~filters.COMMAND, RegistrationHandler.receive_password)],
+    ENTER_SERVER: [MessageHandler(filters.TEXT & ~filters.COMMAND, RegistrationHandler.receive_server)],
     CONFIRM_CREDENTIALS: [CallbackQueryHandler(RegistrationHandler.confirm_credentials, pattern='^confirm_')],
     VERIFYING: [],  # No input while verifying
-    COMPLETE: [MessageHandler(Filters.text, RegistrationHandler.complete)],
+    COMPLETE: [MessageHandler(filters.TEXT, RegistrationHandler.complete)],
 }
 
 
@@ -94,10 +94,9 @@ class RegistrationHandler:
         password = update.message.text
         
         # Basic validation
-        if len(password) < 4:
-            update.message.reply_text(
-                "❌ Password seems too short. Please enter a valid MT5 password:"
-            )
+        is_valid, error = CredentialsValidator.validate_password(password)
+        if not is_valid:
+            update.message.reply_text(f"❌ {error}\nPlease try again:")
             return ENTER_PASSWORD
         
         context.user_data['mt5_password'] = password
@@ -112,8 +111,8 @@ class RegistrationHandler:
         """Receive server and show confirmation"""
         server = update.message.text.strip()
         
-        # Validate server format
-        is_valid, error = validate_mt5_server(server)
+        # Validate server format using CredentialsValidator
+        is_valid, error = CredentialsValidator.validate_server(server)
         if not is_valid:
             update.message.reply_text(f"❌ {error}\nPlease try again:")
             return ENTER_SERVER
