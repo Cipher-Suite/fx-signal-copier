@@ -3,7 +3,7 @@
 Database models for FX Signal Copier
 """
 from sqlalchemy import (
-    Column, Integer, String, Float, DateTime, Boolean, 
+    Column, Integer, BigInteger, String, Float, DateTime, Boolean, 
     JSON, ForeignKey, Text, Index, UniqueConstraint, Numeric
 )
 from sqlalchemy.orm import relationship, validates
@@ -24,7 +24,7 @@ class User(Base):
     uuid = Column(String(36), unique=True, default=lambda: str(uuid.uuid4()), nullable=False)
     
     # Telegram info
-    telegram_id = Column(Integer, unique=True, nullable=False, index=True)
+    telegram_id = Column(BigInteger, unique=True, nullable=False, index=True)
     telegram_username = Column(String(100), index=True)
     first_name = Column(String(100))
     last_name = Column(String(100))
