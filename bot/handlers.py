@@ -27,7 +27,7 @@ class CommandHandlers:
         self.notification = NotificationService(db_session, bot)
         self.sub_service = SubscriptionService(db_session)
     
-    def start(self, update: Update, context: CallbackContext):
+    async def start(self, update: Update, context: CallbackContext):
         """Handle /start command"""
         user = update.effective_user
         db_user = self.user_repo.get_by_telegram_id(user.id)
@@ -52,9 +52,9 @@ class CommandHandlers:
                 "Use /help to see all commands."
             )
         
-        update.message.reply_text(message, parse_mode=ParseMode.MARKDOWN)
+        await update.message.reply_text(message, parse_mode=ParseMode.MARKDOWN)
     
-    def help(self, update: Update, context: CallbackContext):
+    async def help(self, update: Update, context: CallbackContext):
         """Handle /help command"""
         help_text = (
             "*📚 FX Signal Copier Commands*\n\n"
@@ -97,9 +97,9 @@ class CommandHandlers:
             "```"
         )
         
-        update.message.reply_text(help_text, parse_mode=ParseMode.MARKDOWN)
+        await update.message.reply_text(help_text, parse_mode=ParseMode.MARKDOWN)
     
-    def about(self, update: Update, context: CallbackContext):
+    async def about(self, update: Update, context: CallbackContext):
         """Handle /about command"""
         about_text = (
             "*🤖 About FX Signal Copier*\n\n"
@@ -121,9 +121,9 @@ class CommandHandlers:
             "Join our community @fx_signal_copier"
         )
         
-        update.message.reply_text(about_text, parse_mode=ParseMode.MARKDOWN)
+        await update.message.reply_text(about_text, parse_mode=ParseMode.MARKDOWN)
     
-    def balance(self, update: Update, context: CallbackContext):
+    async def balance(self, update: Update, context: CallbackContext):
         """Handle /balance command"""
         user_id = update.effective_user.id
         
@@ -131,38 +131,38 @@ class CommandHandlers:
         context.user_data['action'] = 'balance'
         return self._forward_to_trading(update, context)
     
-    def positions(self, update: Update, context: CallbackContext):
+    async def positions(self, update: Update, context: CallbackContext):
         """Handle /positions command"""
         user_id = update.effective_user.id
         
         context.user_data['action'] = 'positions'
         return self._forward_to_trading(update, context)
     
-    def history(self, update: Update, context: CallbackContext):
+    async def history(self, update: Update, context: CallbackContext):
         """Handle /history command"""
         user_id = update.effective_user.id
         db_user = self.user_repo.get_by_telegram_id(user_id)
         
         if not db_user:
-            update.message.reply_text("Please register first using /register")
+            await update.message.reply_text("Please register first using /register")
             return
         
         trades = self.trade_repo.get_user_trades(db_user.id, limit=20)
         
         if not trades:
-            update.message.reply_text("No trade history found.")
+            await update.message.reply_text("No trade history found.")
             return
         
         history_text = format_trade_history(trades)
-        update.message.reply_text(history_text, parse_mode=ParseMode.HTML)
+        await update.message.reply_text(history_text, parse_mode=ParseMode.HTML)
     
-    def profile(self, update: Update, context: CallbackContext):
+    async def profile(self, update: Update, context: CallbackContext):
         """Handle /profile command"""
         user_id = update.effective_user.id
         db_user = self.user_repo.get_by_telegram_id(user_id)
         
         if not db_user:
-            update.message.reply_text("Please register first using /register")
+            await update.message.reply_text("Please register first using /register")
             return
         
         # Get subscription info
@@ -191,9 +191,9 @@ class CommandHandlers:
             f"Win Rate: {db_user.win_rate:.1f}%\n"
         )
         
-        update.message.reply_text(profile_text, parse_mode=ParseMode.MARKDOWN)
+        await update.message.reply_text(profile_text, parse_mode=ParseMode.MARKDOWN)
     
-    def upgrade(self, update: Update, context: CallbackContext):
+    async def upgrade(self, update: Update, context: CallbackContext):
         """Handle /upgrade command"""
         from bot.keyboards import get_plans_keyboard
         
@@ -229,19 +229,19 @@ class CommandHandlers:
             "• Price: $99.99/month"
         )
         
-        update.message.reply_text(
+        await update.message.reply_text(
             plans_text,
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=get_plans_keyboard()
         )
     
-    def unknown(self, update: Update, context: CallbackContext):
+    async def unknown(self, update: Update, context: CallbackContext):
         """Handle unknown commands"""
-        update.message.reply_text(
+        await update.message.reply_text(
             "❌ Unknown command. Use /help to see available commands."
         )
     
-    def _forward_to_trading(self, update: Update, context: CallbackContext):
+    async def _forward_to_trading(self, update: Update, context: CallbackContext):
         """Forward to trading handler for MT5 operations"""
         from bot.trading import TradingHandler
         

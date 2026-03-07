@@ -36,21 +36,21 @@ class TradingHandler:
         # Track active trades for rate limiting
         self.active_trades = {}
     
-    def start_trade(self, update: Update, context: CallbackContext) -> int:
+    async def start_trade(self, update: Update, context: CallbackContext) -> int:
         """Start the trade placement flow"""
         user_id = update.effective_user.id
         
         # Check if user is registered
         user = self.user_repo.get_by_telegram_id(user_id)
         if not user or not user.is_verified:
-            update.message.reply_text(
+            await update.message.reply_text(
                 "❌ You need to register first!\n\nUse /register to connect your MT5 account."
             )
             return ConversationHandler.END
         
         # Check if already in a trade
         if user_id in self.active_trades:
-            update.message.reply_text(
+            await update.message.reply_text(
                 "⚠️ You already have a trade in progress. Please wait or use /cancel."
             )
             return ConversationHandler.END
@@ -58,7 +58,7 @@ class TradingHandler:
         # Check daily limit
         can_trade, limit_info = self.sub_service.check_trade_limit(user_id)
         if not can_trade:
-            update.message.reply_text(
+            await update.message.reply_text(
                 f"❌ *Daily trade limit reached*\n\n"
                 f"You've used {limit_info['current']}/{limit_info['limit']} trades today.\n"
                 f"Limit resets at midnight UTC.\n\n"
@@ -70,7 +70,7 @@ class TradingHandler:
         context.user_data['action'] = 'trade'
         context.user_data['trade_start'] = asyncio.get_event_loop().time()
         
-        update.message.reply_text(
+        await update.message.reply_text(
             "📝 *Enter your trade signal*\n\n"
             "Use this format:\n"
             "```\n"
@@ -92,21 +92,21 @@ class TradingHandler:
         
         return ENTER_TRADE
     
-    def start_calculate(self, update: Update, context: CallbackContext) -> int:
+    async def start_calculate(self, update: Update, context: CallbackContext) -> int:
         """Start the calculation flow (no execution)"""
         user_id = update.effective_user.id
         
         # Check if user is registered
         user = self.user_repo.get_by_telegram_id(user_id)
         if not user or not user.is_verified:
-            update.message.reply_text(
+            await update.message.reply_text(
                 "❌ You need to register first!\n\nUse /register to connect your MT5 account."
             )
             return ConversationHandler.END
         
         context.user_data['action'] = 'calculate'
         
-        update.message.reply_text(
+        await update.message.reply_text(
             "📊 *Enter trade to calculate*\n\n"
             "Use the same format as /trade, but I won't execute it.\n\n"
             "```\n"
@@ -121,7 +121,7 @@ class TradingHandler:
         
         return ENTER_TRADE
     
-    def receive_trade(self, update: Update, context: CallbackContext) -> int:
+    async def receive_trade(self, update: Update, context: CallbackContext) -> int:
         """Receive and parse trade signal"""
         user_id = update.effective_user.id
         signal_text = update.message.text
@@ -130,7 +130,7 @@ class TradingHandler:
         context.user_data['signal_text'] = signal_text
         
         # Show processing message
-        processing_msg = update.message.reply_text("🔄 Processing your signal...")
+        processing_msg = await update.message.reply_text("🔄 Processing your signal...")
         context.user_data['processing_msg_id'] = processing_msg.message_id
         
         # Parse and calculate based on action
@@ -139,7 +139,7 @@ class TradingHandler:
         else:
             return self._process_calculation(update, context)
     
-    async def _process_trade(self, update: Update, context: CallbackContext) -> int:
+    async async def _process_trade(self, update: Update, context: CallbackContext) -> int:
         """Process a trade signal for execution"""
         user_id = update.effective_user.id
         signal_text = context.user_data['signal_text']
@@ -200,7 +200,7 @@ class TradingHandler:
             # Remove from active
             self.active_trades.pop(user_id, None)
     
-    async def _process_calculation(self, update: Update, context: CallbackContext) -> int:
+    async async def _process_calculation(self, update: Update, context: CallbackContext) -> int:
         """Process a calculation request"""
         user_id = update.effective_user.id
         signal_text = context.user_data['signal_text']
@@ -244,39 +244,39 @@ class TradingHandler:
             )
             return ConversationHandler.END
     
-    def confirm_trade(self, update: Update, context: CallbackContext) -> int:
+    async def confirm_trade(self, update: Update, context: CallbackContext) -> int:
         """Handle trade confirmation"""
         query = update.callback_query
-        query.answer()
+        await query.answer()
         
         action = query.data.replace('trade_', '')
         
         if action == 'execute':
             # Execute the trade
-            query.edit_message_text("🔄 Executing trade...")
+            await query.edit_message_text("🔄 Executing trade...")
             return self._execute_trade(update, context)
         
         elif action == 'adjust':
             # Adjust risk
-            query.edit_message_text(
+            await query.edit_message_text(
                 "Enter new risk percentage (e.g., 1.5 for 1.5%):"
             )
             return ADJUST_RISK
         
         elif action == 'cancel':
             # Cancel
-            query.edit_message_text("❌ Trade cancelled.")
+            await query.edit_message_text("❌ Trade cancelled.")
             context.user_data.clear()
             return ConversationHandler.END
         
         elif action == 'modify':
             # Modify trade parameters
-            query.edit_message_text(
+            await query.edit_message_text(
                 "Please re-enter your trade with modified parameters:"
             )
             return ENTER_TRADE
     
-    async def _execute_trade(self, update: Update, context: CallbackContext) -> int:
+    async async def _execute_trade(self, update: Update, context: CallbackContext) -> int:
         """Execute the confirmed trade"""
         user_id = update.effective_user.id
         calculation = context.user_data.get('calculation')
@@ -335,7 +335,7 @@ class TradingHandler:
         context.user_data.clear()
         return ConversationHandler.END
     
-    def adjust_risk(self, update: Update, context: CallbackContext) -> int:
+    async def adjust_risk(self, update: Update, context: CallbackContext) -> int:
         """Adjust risk percentage"""
         try:
             risk = float(update.message.text)
@@ -354,7 +354,7 @@ class TradingHandler:
             # Show updated calculation
             from bot.keyboards import get_trade_confirmation_keyboard
             
-            update.message.reply_text(
+            await update.message.reply_text(
                 f"✅ Risk set to {risk:.1f}%\n\n"
                 "Review updated calculation:",
                 reply_markup=get_trade_confirmation_keyboard(calculation)
@@ -363,12 +363,12 @@ class TradingHandler:
             return CONFIRM_TRADE
             
         except ValueError:
-            update.message.reply_text(
+            await update.message.reply_text(
                 "❌ Invalid percentage. Please enter a number between 0.1 and 10:"
             )
             return ADJUST_RISK
     
-    async def handle_action(self, update: Update, context: CallbackContext) -> None:
+    async async def handle_action(self, update: Update, context: CallbackContext) -> None:
         """Handle simple actions (balance, positions)"""
         user_id = update.effective_user.id
         action = context.user_data.get('action')
@@ -379,25 +379,25 @@ class TradingHandler:
             if action == 'balance':
                 account_info = await connection.get_account_information()
                 formatted = format_balance(account_info)
-                await update.message.reply_text(formatted, parse_mode=ParseMode.HTML)
+                await await update.message.reply_text(formatted, parse_mode=ParseMode.HTML)
             
             elif action == 'positions':
                 positions = await connection.get_positions()
                 if positions:
                     formatted = format_positions(positions)
-                    await update.message.reply_text(formatted, parse_mode=ParseMode.HTML)
+                    await await update.message.reply_text(formatted, parse_mode=ParseMode.HTML)
                 else:
-                    await update.message.reply_text("No open positions.")
+                    await await update.message.reply_text("No open positions.")
             
         except Exception as e:
             logger.error(f"Action {action} failed: {e}")
-            await update.message.reply_text(
+            await await update.message.reply_text(
                 f"❌ Failed to get {action}: {str(e)[:100]}"
             )
         
         context.user_data.clear()
     
-    async def _edit_message(self, update: Update, context: CallbackContext, 
+    async async def _edit_message(self, update: Update, context: CallbackContext, 
                            text: str, **kwargs):
         """Edit the processing message or send new one"""
         msg_id = context.user_data.get('processing_msg_id')
@@ -418,16 +418,16 @@ class TradingHandler:
                     **kwargs
                 )
         else:
-            await update.message.reply_text(text, **kwargs)
+            await await update.message.reply_text(text, **kwargs)
     
-    def cancel(self, update: Update, context: CallbackContext) -> int:
+    async def cancel(self, update: Update, context: CallbackContext) -> int:
         """Cancel the current operation"""
         user_id = update.effective_user.id
         
         # Remove from active trades
         self.active_trades.pop(user_id, None)
         
-        update.message.reply_text(
+        await update.message.reply_text(
             "❌ Operation cancelled."
         )
         

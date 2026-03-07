@@ -32,28 +32,28 @@ class AuthMiddleware:
         Wrap a handler function with authentication check
         """
         @wraps(handler_func)
-        def wrapper(update: Update, context: CallbackContext, *args, **kwargs):
+        async def wrapper(update, context):
             user_id = update.effective_user.id
             
             # Check if user exists and is active
             user = self.user_repo.get_by_telegram_id(user_id)
             
             if not user:
-                update.message.reply_text(
+                await update.message.reply_text(
                     "❌ You need to register first!\n\n"
                     "Use /register to connect your MT5 account."
                 )
                 return
             
             if not user.is_active:
-                update.message.reply_text(
+                await update.message.reply_text(
                     "❌ Your account is deactivated.\n"
                     "Please contact support for assistance."
                 )
                 return
             
             if user.is_banned:
-                update.message.reply_text(
+                await update.message.reply_text(
                     "❌ Your account has been banned.\n"
                     "Please contact support if you believe this is an error."
                 )
@@ -73,12 +73,12 @@ class AuthMiddleware:
         Wrap a handler function with admin authentication check
         """
         @wraps(handler_func)
-        def wrapper(update: Update, context: CallbackContext, *args, **kwargs):
+        async def wrapper(update, context):
             user_id = update.effective_user.id
             
             # Check if user is admin
             if user_id not in settings.ADMIN_USER_IDS:
-                update.message.reply_text("❌ Unauthorized access.")
+                await update.message.reply_text("❌ Unauthorized access.")
                 return
             
             # Call the original handler
@@ -137,14 +137,14 @@ class RateLimitMiddleware:
         """
         def decorator(handler_func: Callable) -> Callable:
             @wraps(handler_func)
-            def wrapper(update: Update, context: CallbackContext, *args, **kwargs):
+            async def wrapper(update, context):
                 user_id = update.effective_user.id
                 
                 # Check rate limit
                 allowed, retry_after = self.check_rate_limit(user_id, action)
                 
                 if not allowed:
-                    update.message.reply_text(
+                    await update.message.reply_text(
                         f"⏳ *Rate limit exceeded*\n\n"
                         f"Please wait {retry_after} seconds before trying again.",
                         parse_mode=ParseMode.MARKDOWN
@@ -170,7 +170,7 @@ class ErrorHandler:
         self.notification = notification_service
         self.monitoring = monitoring_service
     
-    def handle(self, update: Update, context: CallbackContext) -> None:
+    async def handle(update, context) -> None:
         """
         Handle errors raised in dispatcher
         """
@@ -242,7 +242,7 @@ class LoggingMiddleware:
         Wrap handler function with logging
         """
         @wraps(handler_func)
-        def wrapper(update: Update, context: CallbackContext, *args, **kwargs):
+        async def wrapper(update, context):
             start_time = time.time()
             user = update.effective_user
             chat = update.effective_chat
@@ -291,7 +291,7 @@ class PerformanceMiddleware:
         """
         def decorator(handler_func: Callable) -> Callable:
             @wraps(handler_func)
-            def wrapper(update: Update, context: CallbackContext, *args, **kwargs):
+            async def wrapper(update, context):
                 user_id = update.effective_user.id if update.effective_user else 'unknown'
                 operation_id = f"{operation_name}_{user_id}_{int(time.time())}"
                 
@@ -337,7 +337,7 @@ class MaintenanceMiddleware:
         Wrap handler function with maintenance check
         """
         @wraps(handler_func)
-        def wrapper(update: Update, context: CallbackContext, *args, **kwargs):
+        async def wrapper(update, context):
             # Check if maintenance mode is enabled
             maintenance_mode = self.cache.get('system:maintenance_mode', False)
             
@@ -345,7 +345,7 @@ class MaintenanceMiddleware:
                 # Check if user is admin (admins can bypass)
                 user_id = update.effective_user.id
                 if user_id not in settings.ADMIN_USER_IDS:
-                    update.message.reply_text(
+                    await update.message.reply_text(
                         "🔧 *Bot is under maintenance*\n\n"
                         "Please try again later.",
                         parse_mode=ParseMode.MARKDOWN

@@ -31,7 +31,7 @@ class RegistrationHandler:
         self.mt5_manager = MT5ConnectionManager(db_session)
         self.notification = NotificationService(db_session, bot)
     
-    def start(self, update: Update, context: CallbackContext) -> int:
+    async def start(self, update: Update, context: CallbackContext) -> int:
         """Start the registration process"""
         user = update.effective_user
         
@@ -39,7 +39,7 @@ class RegistrationHandler:
         existing = self.user_repo.get_by_telegram_id(user.id)
         if existing:
             if existing.is_verified:
-                update.message.reply_text(
+                await update.message.reply_text(
                     "✅ You are already registered! Use /settings to update your credentials."
                 )
                 return ConversationHandler.END
@@ -57,21 +57,21 @@ class RegistrationHandler:
             "Please enter your **MT5 Account ID** (login number):"
         )
         
-        update.message.reply_text(welcome_text, parse_mode=ParseMode.MARKDOWN)
+        await update.message.reply_text(welcome_text, parse_mode=ParseMode.MARKDOWN)
         return ENTER_ACCOUNT
     
-    def receive_account(self, update: Update, context: CallbackContext) -> int:
+    async def receive_account(self, update: Update, context: CallbackContext) -> int:
         """Receive and validate account ID"""
         account_id = update.message.text.strip()
         
         # Validate format using CredentialsValidator
         is_valid, error = CredentialsValidator.validate_account_id(account_id)
         if not is_valid:
-            update.message.reply_text(f"❌ {error}\nPlease try again:")
+            await update.message.reply_text(f"❌ {error}\nPlease try again:")
             return ENTER_ACCOUNT
         
         context.user_data['mt5_account'] = account_id
-        update.message.reply_text(
+        await update.message.reply_text(
             "✅ Account ID received!\n\n"
             "Now please enter your **MT5 password**:\n"
             "_(Your password will be encrypted)_",
@@ -79,32 +79,32 @@ class RegistrationHandler:
         )
         return ENTER_PASSWORD
     
-    def receive_password(self, update: Update, context: CallbackContext) -> int:
+    async def receive_password(self, update: Update, context: CallbackContext) -> int:
         """Receive and temporarily store password"""
         password = update.message.text
         
         # Basic validation
         is_valid, error = CredentialsValidator.validate_password(password)
         if not is_valid:
-            update.message.reply_text(f"❌ {error}\nPlease try again:")
+            await update.message.reply_text(f"❌ {error}\nPlease try again:")
             return ENTER_PASSWORD
         
         context.user_data['mt5_password'] = password
-        update.message.reply_text(
+        await update.message.reply_text(
             "✅ Password received!\n\n"
             "Finally, enter your **MT5 server name**:\n"
             "_(e.g., IC Markets-Demo, ICMarkets-Server, Forex.com-Main)_"
         )
         return ENTER_SERVER
     
-    def receive_server(self, update: Update, context: CallbackContext) -> int:
+    async def receive_server(self, update: Update, context: CallbackContext) -> int:
         """Receive server and show confirmation"""
         server = update.message.text.strip()
         
         # Validate server format using CredentialsValidator
         is_valid, error = CredentialsValidator.validate_server(server)
         if not is_valid:
-            update.message.reply_text(f"❌ {error}\nPlease try again:")
+            await update.message.reply_text(f"❌ {error}\nPlease try again:")
             return ENTER_SERVER
         
         context.user_data['mt5_server'] = server
@@ -120,20 +120,20 @@ class RegistrationHandler:
             "Is this correct?"
         )
         
-        update.message.reply_text(
+        await update.message.reply_text(
             confirm_text,
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=get_confirmation_keyboard()
         )
         return CONFIRM_CREDENTIALS
     
-    def confirm_credentials(self, update: Update, context: CallbackContext) -> int:
+    async def confirm_credentials(self, update: Update, context: CallbackContext) -> int:
         """Handle confirmation callback"""
         query = update.callback_query
-        query.answer()
+        await query.answer()
         
         if query.data == 'confirm_yes':
-            query.edit_message_text(
+            await query.edit_message_text(
                 "🔄 *Verifying your credentials...*\n"
                 "This may take up to 30 seconds.",
                 parse_mode=ParseMode.MARKDOWN
@@ -142,12 +142,12 @@ class RegistrationHandler:
             # Start verification
             return self._verify_credentials(update, context)
         else:
-            query.edit_message_text(
+            await query.edit_message_text(
                 "❌ Registration cancelled. Use /register to start over."
             )
             return ConversationHandler.END
     
-    def _verify_credentials(self, update: Update, context: CallbackContext) -> int:
+    async def _verify_credentials(self, update: Update, context: CallbackContext) -> int:
         """Verify credentials with MT5"""
         user_id = update.effective_user.id
         
@@ -209,7 +209,7 @@ class RegistrationHandler:
             from bot.keyboards import get_risk_keyboard
             
             query = update.callback_query
-            query.edit_message_text(
+            await query.edit_message_text(
                 "✅ *Credentials verified successfully!*\n\n"
                 "Now, let's set your default risk per trade.\n\n"
                 "What's your preferred risk level?",
@@ -221,7 +221,7 @@ class RegistrationHandler:
         else:
             # Verification failed
             query = update.callback_query
-            query.edit_message_text(
+            await query.edit_message_text(
                 f"❌ *Verification failed*\n\n"
                 f"Error: {message}\n\n"
                 "Please check your credentials and try again with /register.",
@@ -233,16 +233,16 @@ class RegistrationHandler:
             
             return ConversationHandler.END
     
-    def complete(self, update: Update, context: CallbackContext) -> int:
+    async def complete(self, update: Update, context: CallbackContext) -> int:
         """Complete registration with risk preference"""
         query = update.callback_query
-        query.answer()
+        await query.answer()
         
         if query.data.startswith('risk_'):
             # Parse risk percentage
             risk_str = query.data.replace('risk_', '')
             if risk_str == 'custom':
-                query.edit_message_text(
+                await query.edit_message_text(
                     "Please enter your custom risk percentage (e.g., 1.5 for 1.5%):"
                 )
                 return COMPLETE
@@ -255,7 +255,7 @@ class RegistrationHandler:
                 if risk < 0.001 or risk > 0.1:
                     raise ValueError
             except:
-                update.message.reply_text(
+                await update.message.reply_text(
                     "❌ Invalid risk percentage. Please enter a number between 0.1 and 10:"
                 )
                 return COMPLETE
@@ -279,15 +279,15 @@ class RegistrationHandler:
         )
         
         if hasattr(update, 'callback_query'):
-            query.edit_message_text(completion_text, parse_mode=ParseMode.MARKDOWN)
+            await query.edit_message_text(completion_text, parse_mode=ParseMode.MARKDOWN)
         else:
-            update.message.reply_text(completion_text, parse_mode=ParseMode.MARKDOWN)
+            await update.message.reply_text(completion_text, parse_mode=ParseMode.MARKDOWN)
         
         return ConversationHandler.END
     
-    def cancel(self, update: Update, context: CallbackContext) -> int:
+    async def cancel(self, update: Update, context: CallbackContext) -> int:
         """Cancel registration"""
-        update.message.reply_text(
+        await update.message.reply_text(
             "❌ Registration cancelled. Use /register to start over."
         )
         

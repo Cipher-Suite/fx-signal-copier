@@ -39,12 +39,12 @@ class AdminHandler:
         """Check if user is admin"""
         return user_id in self.admin_ids
     
-    def dashboard(self, update: Update, context: CallbackContext) -> int:
+    async def dashboard(self, update: Update, context: CallbackContext) -> int:
         """Show admin dashboard"""
         user_id = update.effective_user.id
         
         if not self.is_admin(user_id):
-            update.message.reply_text("❌ Unauthorized access.")
+            await update.message.reply_text("❌ Unauthorized access.")
             return ConversationHandler.END
         
         # Get quick stats
@@ -68,7 +68,7 @@ class AdminHandler:
             "Select an option:"
         )
         
-        update.message.reply_text(
+        await update.message.reply_text(
             dashboard_text,
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=get_admin_keyboard()
@@ -76,10 +76,10 @@ class AdminHandler:
         
         return ADMIN_MAIN
     
-    def handle_menu(self, update: Update, context: CallbackContext) -> int:
+    async def handle_menu(self, update: Update, context: CallbackContext) -> int:
         """Handle admin menu selections"""
         query = update.callback_query
-        query.answer()
+        await query.answer()
         
         action = query.data.replace('admin_', '')
         
@@ -94,10 +94,10 @@ class AdminHandler:
         elif action == 'back':
             return self.dashboard(update, context)
         elif action == 'close':
-            query.edit_message_text("👑 Admin session ended.")
+            await query.edit_message_text("👑 Admin session ended.")
             return ConversationHandler.END
     
-    def _show_user_management(self, update: Update, context: CallbackContext) -> int:
+    async def _show_user_management(self, update: Update, context: CallbackContext) -> int:
         """Show user management interface"""
         query = update.callback_query
         
@@ -112,7 +112,7 @@ class AdminHandler:
         
         user_list += "\nSelect a user to manage:"
         
-        query.edit_message_text(
+        await query.edit_message_text(
             user_list,
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=get_admin_user_keyboard(users)
@@ -120,10 +120,10 @@ class AdminHandler:
         
         return USER_MANAGEMENT
     
-    def handle_user_management(self, update: Update, context: CallbackContext) -> int:
+    async def handle_user_management(self, update: Update, context: CallbackContext) -> int:
         """Handle user management actions"""
         query = update.callback_query
-        query.answer()
+        await query.answer()
         
         action = query.data.replace('user_', '')
         
@@ -145,23 +145,23 @@ class AdminHandler:
         elif action.startswith('unban_'):
             user_id = int(action.replace('unban_', ''))
             self.user_repo.update_user(user_id, is_banned=False)
-            query.edit_message_text(f"✅ User {user_id} unbanned.")
+            await query.edit_message_text(f"✅ User {user_id} unbanned.")
             return self._show_user_management(update, context)
         
         elif action.startswith('make_admin_'):
             user_id = int(action.replace('make_admin_', ''))
             # Add to admin list (would need to update settings)
-            query.edit_message_text(f"✅ User {user_id} promoted to admin.")
+            await query.edit_message_text(f"✅ User {user_id} promoted to admin.")
             return self._show_user_management(update, context)
     
-    def _show_user_details(self, update: Update, context: CallbackContext) -> int:
+    async def _show_user_details(self, update: Update, context: CallbackContext) -> int:
         """Show detailed user information"""
         query = update.callback_query
         user_id = context.user_data['selected_user']
         
         user = self.user_repo.get_by_telegram_id(user_id)
         if not user:
-            query.edit_message_text("❌ User not found.")
+            await query.edit_message_text("❌ User not found.")
             return USER_MANAGEMENT
         
         # Get user stats
@@ -193,7 +193,7 @@ class AdminHandler:
             f"Banned: {'✅' if user.is_banned else '❌'}\n"
         )
         
-        query.edit_message_text(
+        await query.edit_message_text(
             details,
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=get_admin_user_actions_keyboard(user)
@@ -201,11 +201,11 @@ class AdminHandler:
         
         return USER_MANAGEMENT
     
-    def _start_broadcast(self, update: Update, context: CallbackContext) -> int:
+    async def _start_broadcast(self, update: Update, context: CallbackContext) -> int:
         """Start broadcast message flow"""
         query = update.callback_query
         
-        query.edit_message_text(
+        await query.edit_message_text(
             "*📢 Send Broadcast*\n\n"
             "Enter the message you want to broadcast to all users:\n"
             "(Supports Markdown formatting)\n\n"
@@ -215,12 +215,12 @@ class AdminHandler:
         
         return BROADCAST
     
-    def handle_broadcast(self, update: Update, context: CallbackContext) -> int:
+    async def handle_broadcast(self, update: Update, context: CallbackContext) -> int:
         """Handle broadcast message input"""
         message = update.message.text
         
         if message == '/cancel':
-            update.message.reply_text("❌ Broadcast cancelled.")
+            await update.message.reply_text("❌ Broadcast cancelled.")
             return self.dashboard(update, context)
         
         # Store message
@@ -233,7 +233,7 @@ class AdminHandler:
             f"Confirm?"
         )
         
-        update.message.reply_text(
+        await update.message.reply_text(
             preview,
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=get_confirmation_keyboard()
@@ -241,7 +241,7 @@ class AdminHandler:
         
         return CONFIRM_ACTION
     
-    def _show_system_stats(self, update: Update, context: CallbackContext) -> int:
+    async def _show_system_stats(self, update: Update, context: CallbackContext) -> int:
         """Show detailed system statistics"""
         query = update.callback_query
         
@@ -277,7 +277,7 @@ class AdminHandler:
             f"Avg Latency: {analytics['connections']['avg_latency']}ms\n"
         )
         
-        query.edit_message_text(
+        await query.edit_message_text(
             stats_text,
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=get_admin_keyboard()
@@ -285,7 +285,7 @@ class AdminHandler:
         
         return ADMIN_MAIN
     
-    def _show_alerts(self, update: Update, context: CallbackContext) -> int:
+    async def _show_alerts(self, update: Update, context: CallbackContext) -> int:
         """Show system alerts"""
         query = update.callback_query
         
@@ -299,7 +299,7 @@ class AdminHandler:
                 level_icon = "🔴" if alert['level'] == 'critical' else "🟡"
                 alerts_text += f"{level_icon} *{alert['metric']}*: {alert['message']}\n"
         
-        query.edit_message_text(
+        await query.edit_message_text(
             alerts_text,
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=get_admin_keyboard()
@@ -307,23 +307,23 @@ class AdminHandler:
         
         return ADMIN_MAIN
     
-    def _confirm_action(self, update: Update, context: CallbackContext, action_desc: str) -> int:
+    async def _confirm_action(self, update: Update, context: CallbackContext, action_desc: str) -> int:
         """Show confirmation dialog"""
         query = update.callback_query
         
         context.user_data['pending_action'] = action_desc
         
-        query.edit_message_text(
+        await query.edit_message_text(
             f"Are you sure you want to {action_desc}?",
             reply_markup=get_confirmation_keyboard()
         )
         
         return CONFIRM_ACTION
     
-    def confirm_action(self, update: Update, context: CallbackContext) -> int:
+    async def confirm_action(self, update: Update, context: CallbackContext) -> int:
         """Handle action confirmation"""
         query = update.callback_query
-        query.answer()
+        await query.answer()
         
         if query.data == 'confirm_yes':
             action = context.user_data.get('pending_action')
@@ -331,20 +331,20 @@ class AdminHandler:
             
             if action == 'ban this user':
                 self.user_repo.update_user(user_id, is_banned=True)
-                query.edit_message_text(f"✅ User {user_id} has been banned.")
+                await query.edit_message_text(f"✅ User {user_id} has been banned.")
             
             elif action == 'broadcast':
                 # Execute broadcast
                 message = context.user_data['broadcast_message']
                 asyncio.create_task(self._execute_broadcast(message))
-                query.edit_message_text("✅ Broadcast started.")
+                await query.edit_message_text("✅ Broadcast started.")
             
             # Clear pending
             context.user_data.pop('pending_action', None)
             context.user_data.pop('selected_user', None)
             
         else:
-            query.edit_message_text("❌ Action cancelled.")
+            await query.edit_message_text("❌ Action cancelled.")
         
         return self.dashboard(update, context)
     
@@ -359,12 +359,12 @@ class AdminHandler:
                 text=f"📢 Broadcast complete: {result['success']} delivered, {result['failed']} failed"
             )
     
-    def stats(self, update: Update, context: CallbackContext):
+    async def stats(self, update: Update, context: CallbackContext):
         """Quick stats command"""
         user_id = update.effective_user.id
         
         if not self.is_admin(user_id):
-            update.message.reply_text("❌ Unauthorized access.")
+            await update.message.reply_text("❌ Unauthorized access.")
             return
         
         system_stats = self.monitoring.get_performance_report()
@@ -378,26 +378,26 @@ class AdminHandler:
             f"Trades 24h: {system_stats['summary']['trades_today']}"
         )
         
-        update.message.reply_text(quick_stats, parse_mode=ParseMode.MARKDOWN)
+        await update.message.reply_text(quick_stats, parse_mode=ParseMode.MARKDOWN)
     
-    def broadcast(self, update: Update, context: CallbackContext):
+    async def broadcast(self, update: Update, context: CallbackContext):
         """Quick broadcast command"""
         user_id = update.effective_user.id
         
         if not self.is_admin(user_id):
-            update.message.reply_text("❌ Unauthorized access.")
+            await update.message.reply_text("❌ Unauthorized access.")
             return
         
         # Check if message provided
         if not context.args:
-            update.message.reply_text("Usage: /broadcast <message>")
+            await update.message.reply_text("Usage: /broadcast <message>")
             return
         
         message = ' '.join(context.args)
         
         # Start broadcast
         asyncio.create_task(self._execute_broadcast(message))
-        update.message.reply_text("📢 Broadcast started.")
+        await update.message.reply_text("📢 Broadcast started.")
 
 # Defined after class so AdminHandler is in scope
 ADMIN_STATES = {

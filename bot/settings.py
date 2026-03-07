@@ -30,13 +30,13 @@ class SettingsHandler:
         self.settings_repo = SettingsRepository(db_session)
         self.auth_service = AuthService(db_session)
     
-    def start(self, update: Update, context: CallbackContext) -> int:
+    async def start(self, update: Update, context: CallbackContext) -> int:
         """Start settings menu"""
         user_id = update.effective_user.id
         db_user = self.user_repo.get_by_telegram_id(user_id)
         
         if not db_user:
-            update.message.reply_text(
+            await update.message.reply_text(
                 "❌ Please register first using /register"
             )
             return ConversationHandler.END
@@ -47,7 +47,7 @@ class SettingsHandler:
         # Show main menu
         settings_text = self._format_settings_summary(db_user)
         
-        update.message.reply_text(
+        await update.message.reply_text(
             settings_text,
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=get_settings_keyboard()
@@ -55,10 +55,10 @@ class SettingsHandler:
         
         return MAIN_MENU
     
-    def handle_menu(self, update: Update, context: CallbackContext) -> int:
+    async def handle_menu(self, update: Update, context: CallbackContext) -> int:
         """Handle main menu selections"""
         query = update.callback_query
-        query.answer()
+        await query.answer()
         
         action = query.data.replace('settings_', '')
         
@@ -73,7 +73,7 @@ class SettingsHandler:
         elif action == 'api':
             return self._show_api_settings(update, context)
         elif action == 'back':
-            query.edit_message_text(
+            await query.edit_message_text(
                 self._format_settings_summary(
                     self.user_repo.get_by_telegram_id(context.user_data['settings_user_id'])
                 ),
@@ -82,10 +82,10 @@ class SettingsHandler:
             )
             return MAIN_MENU
         elif action == 'close':
-            query.edit_message_text("⚙️ Settings closed.")
+            await query.edit_message_text("⚙️ Settings closed.")
             return ConversationHandler.END
     
-    def _show_risk_settings(self, update: Update, context: CallbackContext) -> int:
+    async def _show_risk_settings(self, update: Update, context: CallbackContext) -> int:
         """Show risk settings menu"""
         query = update.callback_query
         user_id = context.user_data['settings_user_id']
@@ -98,7 +98,7 @@ class SettingsHandler:
             "Choose an option to modify:"
         )
         
-        query.edit_message_text(
+        await query.edit_message_text(
             risk_text,
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=get_risk_settings_keyboard(user)
@@ -106,23 +106,23 @@ class SettingsHandler:
         
         return RISK_SETTINGS
     
-    def handle_risk(self, update: Update, context: CallbackContext) -> int:
+    async def handle_risk(self, update: Update, context: CallbackContext) -> int:
         """Handle risk settings updates"""
         query = update.callback_query
-        query.answer()
+        await query.answer()
         
         action = query.data.replace('risk_', '')
         user_id = context.user_data['settings_user_id']
         
         if action == 'default':
-            query.edit_message_text(
+            await query.edit_message_text(
                 "Enter new default risk percentage (e.g., 1.5 for 1.5%):"
             )
             context.user_data['awaiting'] = 'risk_factor'
             return CONFIRM_UPDATE
         
         elif action == 'max_size':
-            query.edit_message_text(
+            await query.edit_message_text(
                 "Enter new maximum position size in lots:"
             )
             context.user_data['awaiting'] = 'max_size'
@@ -131,7 +131,7 @@ class SettingsHandler:
         elif action == 'back':
             return self._show_risk_settings(update, context)
     
-    def _show_notification_settings(self, update: Update, context: CallbackContext) -> int:
+    async def _show_notification_settings(self, update: Update, context: CallbackContext) -> int:
         """Show notification settings menu"""
         query = update.callback_query
         user_id = context.user_data['settings_user_id']
@@ -146,7 +146,7 @@ class SettingsHandler:
             "Toggle settings below:"
         )
         
-        query.edit_message_text(
+        await query.edit_message_text(
             notif_text,
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=get_notification_settings_keyboard(settings)
@@ -154,10 +154,10 @@ class SettingsHandler:
         
         return NOTIFICATION_SETTINGS
     
-    def handle_notifications(self, update: Update, context: CallbackContext) -> int:
+    async def handle_notifications(self, update: Update, context: CallbackContext) -> int:
         """Handle notification settings updates"""
         query = update.callback_query
-        query.answer()
+        await query.answer()
         
         action = query.data.replace('notify_', '')
         user_id = context.user_data['settings_user_id']
@@ -170,7 +170,7 @@ class SettingsHandler:
         elif action == 'daily':
             settings.notify_daily_report = not settings.notify_daily_report
         elif action == 'hour':
-            query.edit_message_text(
+            await query.edit_message_text(
                 "Enter notification hour (0-23 UTC):"
             )
             context.user_data['awaiting'] = 'notify_hour'
@@ -182,7 +182,7 @@ class SettingsHandler:
         self.db.commit()
         return self._show_notification_settings(update, context)
     
-    def _show_symbol_settings(self, update: Update, context: CallbackContext) -> int:
+    async def _show_symbol_settings(self, update: Update, context: CallbackContext) -> int:
         """Show symbol filtering settings"""
         query = update.callback_query
         user_id = context.user_data['settings_user_id']
@@ -195,7 +195,7 @@ class SettingsHandler:
             "Configure which symbols you want to trade:"
         )
         
-        query.edit_message_text(
+        await query.edit_message_text(
             symbols_text,
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=get_symbol_settings_keyboard(user)
@@ -203,22 +203,22 @@ class SettingsHandler:
         
         return SYMBOL_SETTINGS
     
-    def handle_symbols(self, update: Update, context: CallbackContext) -> int:
+    async def handle_symbols(self, update: Update, context: CallbackContext) -> int:
         """Handle symbol settings updates"""
         query = update.callback_query
-        query.answer()
+        await query.answer()
         
         action = query.data.replace('symbol_', '')
         
         if action == 'add':
-            query.edit_message_text(
+            await query.edit_message_text(
                 "Enter symbol to allow (e.g., EURUSD):"
             )
             context.user_data['awaiting'] = 'add_symbol'
             return CONFIRM_UPDATE
         
         elif action == 'remove':
-            query.edit_message_text(
+            await query.edit_message_text(
                 "Enter symbol to block:"
             )
             context.user_data['awaiting'] = 'remove_symbol'
@@ -232,13 +232,13 @@ class SettingsHandler:
             user.blocked_symbols = []
             self.db.commit()
             
-            query.edit_message_text("✅ Symbol filters cleared.")
+            await query.edit_message_text("✅ Symbol filters cleared.")
             return self._show_symbol_settings(update, context)
         
         elif action == 'back':
             return self._show_symbol_settings(update, context)
     
-    def _show_connection_settings(self, update: Update, context: CallbackContext) -> int:
+    async def _show_connection_settings(self, update: Update, context: CallbackContext) -> int:
         """Show connection settings"""
         query = update.callback_query
         user_id = context.user_data['settings_user_id']
@@ -253,7 +253,7 @@ class SettingsHandler:
             "What would you like to do?"
         )
         
-        query.edit_message_text(
+        await query.edit_message_text(
             conn_text,
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=get_connection_settings_keyboard()
@@ -261,21 +261,21 @@ class SettingsHandler:
         
         return CONNECTION_SETTINGS
     
-    def handle_connection(self, update: Update, context: CallbackContext) -> int:
+    async def handle_connection(self, update: Update, context: CallbackContext) -> int:
         """Handle connection settings"""
         query = update.callback_query
-        query.answer()
+        await query.answer()
         
         action = query.data.replace('conn_', '')
         
         if action == 'test':
-            query.edit_message_text("🔄 Testing connection...")
+            await query.edit_message_text("🔄 Testing connection...")
             # Trigger connection test
             asyncio.create_task(self._test_connection(update, context))
             return CONNECTION_SETTINGS
         
         elif action == 'update':
-            query.edit_message_text(
+            await query.edit_message_text(
                 "Enter new MT5 credentials in format:\n"
                 "`ACCOUNT_ID PASSWORD SERVER`\n\n"
                 "Example:\n"
@@ -287,7 +287,7 @@ class SettingsHandler:
         elif action == 'back':
             return self._show_connection_settings(update, context)
     
-    def _show_api_settings(self, update: Update, context: CallbackContext) -> int:
+    async def _show_api_settings(self, update: Update, context: CallbackContext) -> int:
         """Show API settings"""
         query = update.callback_query
         user_id = context.user_data['settings_user_id']
@@ -300,7 +300,7 @@ class SettingsHandler:
             "Generate an API key to access the bot programmatically."
         )
         
-        query.edit_message_text(
+        await query.edit_message_text(
             api_text,
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=get_api_settings_keyboard(settings)
@@ -308,10 +308,10 @@ class SettingsHandler:
         
         return API_SETTINGS
     
-    def handle_api(self, update: Update, context: CallbackContext) -> int:
+    async def handle_api(self, update: Update, context: CallbackContext) -> int:
         """Handle API settings"""
         query = update.callback_query
-        query.answer()
+        await query.answer()
         
         action = query.data.replace('api_', '')
         user_id = context.user_data['settings_user_id']
@@ -319,7 +319,7 @@ class SettingsHandler:
         if action == 'generate':
             # Generate new API key
             api_key = self.settings_repo.generate_api_key(user_id)
-            query.edit_message_text(
+            await query.edit_message_text(
                 f"✅ *New API Key Generated*\n\n"
                 f"Key: `{api_key}`\n\n"
                 "⚠️ Save this key now - it won't be shown again!\n\n"
@@ -330,14 +330,14 @@ class SettingsHandler:
         elif action == 'revoke':
             # Revoke API key
             self.settings_repo.revoke_api_key(user_id)
-            query.edit_message_text("✅ API key revoked.")
+            await query.edit_message_text("✅ API key revoked.")
         
         elif action == 'back':
             return self._show_api_settings(update, context)
         
         return API_SETTINGS
     
-    def confirm_update(self, update: Update, context: CallbackContext) -> int:
+    async def confirm_update(self, update: Update, context: CallbackContext) -> int:
         """Handle text input for settings updates"""
         if not update.message:
             return CONFIRM_UPDATE
@@ -351,11 +351,11 @@ class SettingsHandler:
                 risk = float(text) / 100
                 if 0.001 <= risk <= 0.1:
                     self.user_repo.update_user(user_id, default_risk_factor=risk)
-                    update.message.reply_text(f"✅ Risk factor updated to {float(text):.1f}%")
+                    await update.message.reply_text(f"✅ Risk factor updated to {float(text):.1f}%")
                 else:
                     raise ValueError
             except:
-                update.message.reply_text("❌ Invalid value. Please enter a number between 0.1 and 10.")
+                await update.message.reply_text("❌ Invalid value. Please enter a number between 0.1 and 10.")
                 return CONFIRM_UPDATE
         
         elif awaiting == 'max_size':
@@ -363,11 +363,11 @@ class SettingsHandler:
                 size = float(text)
                 if 0.01 <= size <= 100:
                     self.user_repo.update_user(user_id, max_position_size=size)
-                    update.message.reply_text(f"✅ Max position size updated to {size}")
+                    await update.message.reply_text(f"✅ Max position size updated to {size}")
                 else:
                     raise ValueError
             except:
-                update.message.reply_text("❌ Invalid value. Please enter a number between 0.01 and 100.")
+                await update.message.reply_text("❌ Invalid value. Please enter a number between 0.01 and 100.")
                 return CONFIRM_UPDATE
         
         elif awaiting == 'notify_hour':
@@ -377,11 +377,11 @@ class SettingsHandler:
                     settings = self.settings_repo.get_by_telegram_id(user_id)
                     settings.notification_hour = hour
                     self.db.commit()
-                    update.message.reply_text(f"✅ Notification hour set to {hour}:00 UTC")
+                    await update.message.reply_text(f"✅ Notification hour set to {hour}:00 UTC")
                 else:
                     raise ValueError
             except:
-                update.message.reply_text("❌ Invalid hour. Please enter a number between 0 and 23.")
+                await update.message.reply_text("❌ Invalid hour. Please enter a number between 0 and 23.")
                 return CONFIRM_UPDATE
         
         elif awaiting == 'credentials':
@@ -393,17 +393,17 @@ class SettingsHandler:
                 server = ' '.join(parts[2:])
                 
                 # Update in background
-                update.message.reply_text("🔄 Updating credentials...")
+                await update.message.reply_text("🔄 Updating credentials...")
                 asyncio.create_task(self._update_credentials(update, context, account, password, server))
             else:
-                update.message.reply_text("❌ Invalid format. Use: ACCOUNT PASSWORD SERVER")
+                await update.message.reply_text("❌ Invalid format. Use: ACCOUNT PASSWORD SERVER")
                 return CONFIRM_UPDATE
         
         # Clear awaiting state
         context.user_data.pop('awaiting', None)
         
         # Return to main menu
-        update.message.reply_text(
+        await update.message.reply_text(
             self._format_settings_summary(self.user_repo.get_by_telegram_id(user_id)),
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=get_settings_keyboard()
@@ -411,7 +411,7 @@ class SettingsHandler:
         
         return MAIN_MENU
     
-    async def _test_connection(self, update: Update, context: CallbackContext):
+    async async def _test_connection(self, update: Update, context: CallbackContext):
         """Test MT5 connection"""
         user_id = context.user_data['settings_user_id']
         
@@ -430,7 +430,7 @@ class SettingsHandler:
                 text=f"❌ Connection test failed: {str(e)[:100]}"
             )
     
-    async def _update_credentials(self, update: Update, context: CallbackContext,
+    async async def _update_credentials(self, update: Update, context: CallbackContext,
                                   account: str, password: str, server: str):
         """Update MT5 credentials"""
         user_id = context.user_data['settings_user_id']
@@ -493,9 +493,9 @@ class SettingsHandler:
             "Select a category to modify:"
         )
     
-    def cancel(self, update: Update, context: CallbackContext) -> int:
+    async def cancel(self, update: Update, context: CallbackContext) -> int:
         """Cancel settings"""
-        update.message.reply_text("⚙️ Settings closed.")
+        await update.message.reply_text("⚙️ Settings closed.")
         context.user_data.clear()
         return ConversationHandler.END
 
