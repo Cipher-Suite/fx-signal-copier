@@ -1,3 +1,5 @@
+<div align="left">
+ 
 ## FX Signal Copier Bot 📈🤖
 
 [![Python](https://img.shields.io/badge/Python-3.9%2B-3776AB?logo=python)](https://www.python.org/)
@@ -8,6 +10,7 @@
 [![MetaAPI](https://img.shields.io/badge/MetaAPI-Cloud-00B5B8?logo=cloud)](https://metaapi.cloud/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](https://github.com/KAPKEPOT/fx-signal-copier/blob/main/LICENSE)
 [![Telegram](https://img.shields.io/badge/Cipher-Trading%20Group-26A5E4?logo=telegram)](https://t.me/CipherTrade1)
+
 
 A powerful Telegram bot that automatically executes forex trades on MetaTrader 5 accounts. Users can send trading signals via Telegram, and the bot calculates position sizes based on risk management rules and executes trades automatically.
 
@@ -377,3 +380,5 @@ Distributed under the MIT License. See LICENSE for more information.
 **⭐ Star History**
 
 https://api.star-history.com/svg?repos=KAPKEPOT/fx-signal-copier&type=Date
+
+</div>
