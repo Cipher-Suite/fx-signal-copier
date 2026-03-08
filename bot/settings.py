@@ -8,8 +8,12 @@ from sqlalchemy.orm import Session
 from database.repositories import UserRepository, SettingsRepository
 from services.auth import AuthService
 from bot.keyboards import (
-    get_settings_keyboard, get_risk_settings_keyboard,
-    get_notification_settings_keyboard, get_symbol_settings_keyboard
+    get_settings_keyboard, 
+    get_risk_settings_keyboard,
+    get_notification_settings_keyboard, 
+    get_symbol_settings_keyboard,
+    get_connection_settings_keyboard,
+    get_api_settings_keyboard
 )
 
 logger = logging.getLogger(__name__)
