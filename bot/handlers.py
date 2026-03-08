@@ -129,7 +129,7 @@ class CommandHandlers:
         
         # This will be handled by the trading handler with MT5 connection
         context.user_data['action'] = 'balance'
-        return self._forward_to_trading(update, context)
+        return await self._forward_to_trading(update, context)
     
     async def positions(self, update: Update, context: CallbackContext):
         """Handle /positions command"""
