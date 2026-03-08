@@ -1,4 +1,4 @@
-# FX
+# fx-signal-copier
  #### Setup Instructions
 
 ##### Option A: Local Development Setup
