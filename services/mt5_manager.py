@@ -36,19 +36,29 @@ class ConnectionPool:
     
     async def stop(self):
         """Stop the connection pool and close all connections"""
-        if self._cleanup_task:
-            self._cleanup_task.cancel()
-            try:
-                await self._cleanup_task
-            except asyncio.CancelledError:
-                pass
+        logger.info("Stopping connection pool...")
         
-        # Close all connections
+        # Cancel cleanup task
+        if self._cleanup_task and not self._cleanup_task.done():
+        	self._cleanup_task.cancel()
+        	try:
+        		await asyncio.wait_for(self._cleanup_task, timeout=3.0)
+        	except (asyncio.CancelledError, asyncio.TimeoutError):
+        		pass
+        
+        # Close all connections with timeout
+        close_tasks = []
         for user_id in list(self.connections.keys()):
-            await self.close_connection(user_id)
+        	close_tasks.append(self.close_connection(user_id))
         
-        logger.info("Connection pool stopped")
-    
+        if close_tasks:
+        	try:
+        		await asyncio.wait_for(asyncio.gather(*close_tasks, return_exceptions=True), timeout=5.0)
+        	except asyncio.TimeoutError:
+        		logger.warning("Some connections did not close within timeout")
+        
+        logger.info(f"Connection pool stopped, closed {len(close_tasks)} connections")
+        
     async def get_connection(self, user_id: int, api: MetaApi, account_id: str):
         """
         Get or create a connection for a user
