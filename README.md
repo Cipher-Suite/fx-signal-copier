@@ -18,65 +18,41 @@
 
 **🎯 Core Functionality**
 
-· **Automated Trade Execution** - Send signals via Telegram, bot executes on MT5
-
-· **Multi-User Support** - Each user connects their own MT5 account
-
-· **Smart Risk Management** - Automatic position sizing based on account balance
-
-· **Multiple Take Profits** - Support for up to 2 TP levels
-
-· **All Order Types** - Market, Limit, and Stop orders
-
-#### **🔐 Security**
-
-· **Encrypted Credentials** - User passwords securely encrypted
-
-· **Telegram Authentication** - Only authorized users can access
-
-· **Rate Limiting** - Prevents abuse and API overuse
+- **Automated Trade Execution** - Send signals via Telegram, bot executes on MT5
+- **Multi-User Support** - Each user connects their own MT5 account
+- **Smart Risk Management** - Automatic position sizing based on account balance
+- **Multiple Take Profits** - Support for up to 2 TP levels
+- **All Order Types** - Market, Limit, and Stop orders
 
 #### 📊 User Features
 
-· **Risk Calculator** - Preview trade risk before executing
-
-· **Account Dashboard** - Check balance, open positions, trade history
-
-· **Customizable Settings** - Per-user risk preferences, symbol filters
-
-· **Real-time Notifications** - Trade confirmations and alerts
+- **Risk Calculator** - Preview trade risk before executing
+- **Account Dashboard** - Check balance, open positions, trade history
+- **Customizable Settings** - Per-user risk preferences, symbol filters
+- **Real-time Notifications** - Trade confirmations and alerts
 
 #### 👑 Admin Features
 
-· **User Management** - View, ban, or promote users
-
-· **Broadcast Messages** - Send announcements to all users
-
-· **System Monitoring** - Track performance and errors
-
-· **Usage Statistics** - View platform analytics
+- **User Management** - View, ban, or promote users
+- **Broadcast Messages** - Send announcements to all users
+- **System Monitoring** - Track performance and errors
+- **Usage Statistics** - View platform analytics
 
 ##### 💎 Subscription Plans
 
-· **Free Tier** - 10 trades/day, basic features
-
-· **Pro Tier** - 50 trades/day, multiple TPs
-
-· **Enterprise** - Unlimited trades, API access
+- **Free Tier** - 10 trades/day, basic features
+- **Pro Tier** - 50 trades/day, multiple TPs
+- **Enterprise** - Unlimited trades, API access
 
 ##### 🚀 Quick Start
 
 **Prerequisites**
 
-· Python 3.9+
-
-· PostgreSQL
-
-· Redis
-
-· MetaAPI
-
-· Telegram Bot Token (from @BotFather)
+- Python 3.9+
+- PostgreSQL
+- Redis
+- MetaAPI
+- Telegram Bot Token (from @BotFather)
 
 #### **Setup Instructions**
 
@@ -252,15 +228,11 @@ docker-compose down
 
 ##### Docker Compose Services
 
-· ***postgres** - Database
-
-· **redis** - Cache and rate limiting
-
-· **bot** - Main Telegram bot
-
-· **celery-worker** - Background tasks
-
-· **celery-beat** - Scheduled tasks
+- ***postgres** - Database
+- **redis** - Cache and rate limiting
+- **bot** - Main Telegram bot
+- **celery-worker** - Background tasks
+- **celery-beat** - Scheduled tasks
 
 
 #### 📁 Project Structure
@@ -306,33 +278,29 @@ alembic downgrade -1
 
 #### **🔒 Security**
 
-·**Password Encryption:** AES-256 encryption for MT5 passwords
-
-·**JWT Tokens:** For API authentication
-
-·**Rate Limiting:** Prevents brute force attacks
-
-·**Input Validation:** All user input sanitized
-
-·**SQL Injection:** Protected by SQLAlchemy ORM
+- **Password Encryption:** AES-256 encryption for MT5 passwords
+- **JWT Tokens:** For API authentication
+- **Rate Limiting:** Prevents brute force attacks
+- **Input Validation:** All user input sanitized
+- **SQL Injection:** Protected by SQLAlchemy ORM
 
 #### **🚦 Error Handling**
 
-The bot includes comprehensive error handling:
+**The bot includes comprehensive error handling:**
 
-· Connection failures
-· Invalid signals
-· Insufficient balance
-· Rate limit exceeded
-· Database errors
-· API timeouts
+- Connection failures
+- Invalid signals
+- Insufficient balance
+- Rate limit exceeded
+- Database errors
+- API timeouts
 
 #### 📊 Monitoring
 
-· Prometheus Metrics available on port 9090
-· Structured Logging with JSON format
-· Sentry Integration for error tracking
-· Performance Tracking for all operations
+- Prometheus Metrics available on port 9090
+- Structured Logging with JSON format
+- Sentry Integration for error tracking
+- Performance Tracking for all operations
 
 #### **🤝 Contributing**
 
