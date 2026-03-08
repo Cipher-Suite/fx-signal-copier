@@ -1,6 +1,7 @@
 # fx/bot/trading.py
 import asyncio
 import logging
+import telegram
 from telegram import Update
 from telegram.constants import ParseMode
 from telegram.ext import ConversationHandler, CallbackContext, MessageHandler, CallbackQueryHandler, filters
@@ -12,6 +13,7 @@ from services.mt5_manager import MT5ConnectionManager
 from services.risk_service import RiskService
 from services.subscription import SubscriptionService
 from bot.keyboards import get_trade_confirmation_keyboard
+from bot.message_utils import safe_edit_message
 from utils.formatters import format_trade_calculation, format_positions, format_balance
 
 logger = logging.getLogger(__name__)
@@ -191,12 +193,32 @@ class TradingHandler:
             
             # Show confirmation
             formatted = format_trade_calculation(result)
-            await self._edit_message(
-                update, context,
-                formatted,
-                parse_mode=ParseMode.HTML,
-                reply_markup=get_trade_confirmation_keyboard(result)
-            )
+            
+            # Use safe edit for the processing message
+            msg_id = context.user_data.get('processing_msg_id')
+            if msg_id:
+                try:
+                    await safe_edit_message(
+                        update.callback_query if hasattr(update, 'callback_query') else None,
+                        formatted,
+                        parse_mode=ParseMode.HTML,
+                        reply_markup=get_trade_confirmation_keyboard(result)
+                    )
+                except AttributeError:
+                    # Not a callback query, use the edit_message method
+                    await self._edit_message(
+                        update, context,
+                        formatted,
+                        parse_mode=ParseMode.HTML,
+                        reply_markup=get_trade_confirmation_keyboard(result)
+                    )
+            else:
+                await self._edit_message(
+                    update, context,
+                    formatted,
+                    parse_mode=ParseMode.HTML,
+                    reply_markup=get_trade_confirmation_keyboard(result)
+                )
             
             return CONFIRM_TRADE
             

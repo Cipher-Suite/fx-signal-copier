@@ -15,6 +15,7 @@ from bot.keyboards import (
     get_connection_settings_keyboard,
     get_api_settings_keyboard
 )
+from bot.message_utils import safe_edit_message
 
 logger = logging.getLogger(__name__)
 
@@ -77,10 +78,12 @@ class SettingsHandler:
         elif action == 'api':
             return await self._show_api_settings(update, context)
         elif action == 'back':
-            await query.edit_message_text(
-                self._format_settings_summary(
-                    self.user_repo.get_by_telegram_id(context.user_data['settings_user_id'])
-                ),
+            settings_text = self._format_settings_summary(
+                self.user_repo.get_by_telegram_id(context.user_data['settings_user_id'])
+            )
+            await safe_edit_message(
+                query,
+                settings_text,
                 parse_mode=ParseMode.MARKDOWN,
                 reply_markup=get_settings_keyboard()
             )
@@ -102,7 +105,8 @@ class SettingsHandler:
             "Choose an option to modify:"
         )
         
-        await query.edit_message_text(
+        await safe_edit_message(
+            query,
             risk_text,
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=get_risk_settings_keyboard(user)
@@ -150,7 +154,8 @@ class SettingsHandler:
             "Toggle settings below:"
         )
         
-        await query.edit_message_text(
+        await safe_edit_message(
+            query,
             notif_text,
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=get_notification_settings_keyboard(settings)
@@ -199,7 +204,8 @@ class SettingsHandler:
             "Configure which symbols you want to trade:"
         )
         
-        await query.edit_message_text(
+        await safe_edit_message(
+            query,
             symbols_text,
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=get_symbol_settings_keyboard(user)
@@ -237,10 +243,10 @@ class SettingsHandler:
             self.db.commit()
             
             await query.edit_message_text("✅ Symbol filters cleared.")
-            return self._show_symbol_settings(update, context)
+            return await self._show_symbol_settings(update, context)
         
         elif action == 'back':
-            return self._show_symbol_settings(update, context)
+            return await self._show_symbol_settings(update, context)
     
     async def _show_connection_settings(self, update: Update, context: CallbackContext) -> int:
         """Show connection settings"""
@@ -257,7 +263,8 @@ class SettingsHandler:
             "What would you like to do?"
         )
         
-        await query.edit_message_text(
+        await safe_edit_message(
+            query,
             conn_text,
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=get_connection_settings_keyboard()
@@ -289,7 +296,7 @@ class SettingsHandler:
             return CONFIRM_UPDATE
         
         elif action == 'back':
-            return self._show_connection_settings(update, context)
+            return await self._show_connection_settings(update, context)
     
     async def _show_api_settings(self, update: Update, context: CallbackContext) -> int:
         """Show API settings"""
@@ -304,7 +311,8 @@ class SettingsHandler:
             "Generate an API key to access the bot programmatically."
         )
         
-        await query.edit_message_text(
+        await safe_edit_message(
+            query,
             api_text,
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=get_api_settings_keyboard(settings)
@@ -337,7 +345,7 @@ class SettingsHandler:
             await query.edit_message_text("✅ API key revoked.")
         
         elif action == 'back':
-            return self._show_api_settings(update, context)
+            return await self._show_api_settings(update, context)
         
         return API_SETTINGS
     

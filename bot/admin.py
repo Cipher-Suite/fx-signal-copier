@@ -12,6 +12,7 @@ from services.analytics import AnalyticsService
 from services.monitoring import MonitoringService
 from config.settings import settings
 from bot.keyboards import get_admin_keyboard, get_admin_user_keyboard
+from bot.message_utils import safe_edit_message
 
 logger = logging.getLogger(__name__)
 
@@ -108,7 +109,8 @@ class AdminHandler:
         
         user_list += "\nSelect a user to manage:"
         
-        await query.edit_message_text(
+        await safe_edit_message(
+            query,
             user_list,
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=get_admin_user_keyboard(users)
@@ -189,7 +191,8 @@ class AdminHandler:
             f"Banned: {'✅' if user.is_banned else '❌'}\n"
         )
         
-        await query.edit_message_text(
+        await safe_edit_message(
+            query,
             details,
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=get_admin_user_actions_keyboard(user)
@@ -273,7 +276,8 @@ class AdminHandler:
             f"Avg Latency: {analytics['connections']['avg_latency']}ms\n"
         )
         
-        await query.edit_message_text(
+        await safe_edit_message(
+            query,
             stats_text,
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=get_admin_keyboard()
@@ -295,7 +299,8 @@ class AdminHandler:
                 level_icon = "🔴" if alert['level'] == 'critical' else "🟡"
                 alerts_text += f"{level_icon} *{alert['metric']}*: {alert['message']}\n"
         
-        await query.edit_message_text(
+        await safe_edit_message(
+            query,
             alerts_text,
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=get_admin_keyboard()

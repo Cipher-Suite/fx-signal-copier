@@ -13,6 +13,7 @@ from bot.keyboards import (
     get_settings_keyboard, get_plans_keyboard,
     get_confirmation_keyboard, get_pagination_keyboard
 )
+from bot.message_utils import safe_edit_message
 
 logger = logging.getLogger(__name__)
 
@@ -84,7 +85,8 @@ class CallbackHandlers:
                     f"• Auto-trading: {'✅' if plan.supports_auto_trading else '❌'}\n\n"
                 )
             
-            await query.edit_message_text(
+            await safe_edit_message(
+                query,
                 text,
                 parse_mode=ParseMode.MARKDOWN,
                 reply_markup=get_plans_keyboard()
@@ -126,38 +128,11 @@ class CallbackHandlers:
                 from bot.keyboards import get_upgrade_keyboard
                 keyboard = get_upgrade_keyboard(plan_tier)
             
-            await query.edit_message_text(
+            await safe_edit_message(
+                query,
                 text,
                 parse_mode=ParseMode.MARKDOWN,
                 reply_markup=keyboard
-            )
-        
-        elif action == 'upgrade':
-            # Process upgrade
-            plan_tier = args[1]
-            user_id = update.effective_user.id
-            
-            # Check if already on this plan
-            current = self.sub_service.get_user_plan(user_id)
-            if current.tier == plan_tier:
-                await query.edit_message_text("✅ You are already on this plan.")
-                return
-            
-            # Show payment options
-            text = (
-                f"*Upgrade to {plan_tier}*\n\n"
-                "Choose payment method:\n\n"
-                "• 💳 Credit Card\n"
-                "• ₿ Bitcoin\n"
-                "• 💵 PayPal\n\n"
-                "Select an option below:"
-            )
-            
-            from bot.keyboards import get_payment_keyboard
-            await query.edit_message_text(
-                text,
-                parse_mode=ParseMode.MARKDOWN,
-                reply_markup=get_payment_keyboard(plan_tier)
             )
     
     async def handle_notification(self, update: Update, context: CallbackContext, args: list):
@@ -357,7 +332,8 @@ class CallbackHandlers:
                 text += f"{icon} {notif.title}\n"
                 text += f"   {notif.created_at.strftime('%H:%M')} - {notif.message[:50]}...\n\n"
             
-            await query.edit_message_text(
+            await safe_edit_message(
+                query,
                 text,
                 parse_mode=ParseMode.MARKDOWN,
                 reply_markup=get_pagination_keyboard(page, total_pages, 'notifications')
