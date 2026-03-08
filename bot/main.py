@@ -25,8 +25,6 @@ from services.monitoring import MonitoringService
 from database.db_persistence import DBPersistence
 
 logger = logging.getLogger(__name__)
-
-
 class Bot:
     """
     Main bot class - initializes and runs the Telegram bot
@@ -36,6 +34,7 @@ class Bot:
         # Initialize database
         db_manager.initialize(settings.DATABASE_URL)
         self.db = db_manager.get_session()
+        # self.user_repo = UserRepository(self.db)
 
         # Initialize sync services
         self.cache = CacheService()
@@ -43,8 +42,7 @@ class Bot:
         self.task_manager = AsyncTaskManager()
         self.notification = NotificationService(self.db, None)
         self.monitoring = MonitoringService(self.db)
-        self.mt5_manager = None  # created in _post_init (needs running event loop)
-
+        self.mt5_manager = None 
         # Initialize all handler objects synchronously — no async needed yet
         self.command_handlers = CommandHandlers(self.db, None)   # bot set after build
         self.registration     = RegistrationHandler(self.db, None, mt5_manager=None)
@@ -277,17 +275,135 @@ class Bot:
 
     async def _handle_callback(self, update, context):
         query = update.callback_query
-        parts = query.data.split(':')
-        handler_name = parts[0]
-
-        if handler_name == 'trade':
-            await self.trading.handle_callback(update, context)
-        elif handler_name == 'settings':
-            await self.settings_handler.handle_callback(update, context)
-        elif handler_name == 'admin':
-            await self.admin.handle_callback(update, context)
+        user_id = update.effective_user.id
+        data = query.data
+        
+        logger.debug(f"Callback received: {data} from user {user_id}")
+        
+        if data.startswith('admin:') or data.startswith('admin_'):
+        	# Verify admin status
+        	if user_id not in settings.ADMIN_USER_IDS:
+        		await query.answer("❌ Admin access required", show_alert=True)
+        		logger.warning(f"Non-admin user {user_id} attempted admin action: {data}")
+        		return
+        		
+        	# Call the admin handler's callback method
+        	await self.admin.handle_callback(update, context)
+        	logger.info(f"Admin action {data} executed by user {user_id}")
+        
+        elif data.startswith('trade_') or data.startswith('trade:'):
+        	# Verify user is registered and active
+        	user = self.user_repo.get_by_telegram_id(user_id)
+        	if not user:
+        		await query.answer("❌ Please register first using /register", show_alert=True)
+        		return
+        	if not user.is_active:
+        		await query.answer("❌ Your account is deactivated", show_alert=True)
+        		return
+        	if user.is_banned:
+        		await query.answer("❌ Your account has been banned", show_alert=True)
+        		return
+        		
+        	# Forward to trading handler's confirm_trade method
+        	await self.trading.confirm_trade(update, context)
+        
+        elif data.startswith('settings_') or data.startswith('settings:'):
+        	# Verify user is registered and active
+        	user = self.user_repo.get_by_telegram_id(user_id)
+        	if not user:
+        		await query.answer("❌ Please register first using /register", show_alert=True)
+        		return
+        	if not user.is_active:
+        		await query.answer("❌ Your account is deactivated", show_alert=True)
+        		return
+        	if user.is_banned:
+        		await query.answer("❌ Your account has been banned", show_alert=True)
+        		return
+        	
+        	# Forward to settings handler's handle_menu method
+        	await self.settings_handler.handle_menu(update, context)
+        
+        elif data.startswith('confirm_'):
+        	# Registration doesn't require auth check (user might not be registered yet)
+        	await self.registration.confirm_credentials(update, context)
+        
+        elif data.startswith('plan_'):
+        	# Can be accessed by anyone, but check registration for upgrades
+        	if data in ['plan_free', 'plan_basic', 'plan_pro', 'plan_enterprise']:
+        		# For plan selection, user should be registered
+        		user = self.user_repo.get_by_telegram_id(user_id)
+        		if not user:
+        			await query.answer("❌ Please register first", show_alert=True)
+        			return
+        		
+        		from bot.callbacks import CallbackHandlers
+        		callbacks = CallbackHandlers(self.db, self.bot)
+        		await callbacks.handle_plan(update, context, [data.replace('plan_', '')])
+        	else:
+        		await query.answer("Unknown plan action")
+        
+        # Handle notification interactions
+        elif data.startswith('notification_') or data.startswith('notify_'):
+        	user = self.user_repo.get_by_telegram_id(user_id)
+        	if not user:
+        		await query.answer("❌ Please register first", show_alert=True)
+        		return
+        	
+        	from bot.callbacks import CallbackHandlers
+        	callbacks = CallbackHandlers(self.db, self.bot)
+        	
+        	# Parse action
+        	if data.startswith('notification_'):
+        		action = data.replace('notification_', '')
+        		
+        	else:
+        		action = data.replace('notify_', '')
+        		
+        	await callbacks.handle_notification(update, context, [action])
+        
+        elif data.startswith('position_'):
+        	user = self.user_repo.get_by_telegram_id(user_id)
+        	if not user:
+        		await query.answer("❌ Please register first", show_alert=True)
+        		return
+        	
+        	from bot.callbacks import CallbackHandlers
+        	callbacks = CallbackHandlers(self.db, self.bot)
+        	
+        	# Parse action and position ID
+        	parts = data.split('_')
+        	if len(parts) >= 3:
+        		action = parts[1]
+        		position_id = '_'.join(parts[2:])  # Rejoin in case ID has underscores
+        		await callbacks.handle_position(update, context, [action, position_id])
+        	else:
+        		await query.answer("Invalid position data")
+        
+        # Handle pagination (trade history, notifications list)
+        elif '_page_' in data:
+        	# Extract prefix and page number
+        	parts = data.split('_page_')
+        	if len(parts) == 2:
+        		prefix = parts[0]
+        		page = parts[1]
+        		
+        		from bot.callbacks import CallbackHandlers
+        		callbacks = CallbackHandlers(self.db, self.bot)
+        		await callbacks.handle_pagination(update, context, [prefix, page])
+        	else:
+        		await query.answer("Invalid pagination data")
+        
+        # Handle help section navigation
+        elif data.startswith('help_'):
+        	from bot.callbacks import CallbackHandlers
+        	callbacks = CallbackHandlers(self.db, self.bot)
+        	
+        	section = data.replace('help_', '')
+        	await callbacks.handle_help(update, context, [section])
+        
         else:
-            await query.answer("Unknown action")
+        	logger.warning(f"Unknown callback data received: {data} from user {user_id}")
+        	await query.answer("Unknown action", show_alert=False)
 
     async def _background_tasks(self):
         """Run background tasks with proper cancellation handling"""

@@ -19,10 +19,6 @@ logger = logging.getLogger(__name__)
 (ADMIN_MAIN, USER_MANAGEMENT, BROADCAST, SYSTEM_STATS, CONFIRM_ACTION) = range(5)
 
 class AdminHandler:
-    """
-    Handles admin-only commands and management
-    """
-    
     def __init__(self, db_session: Session, bot):
         self.db = db_session
         self.bot = bot
@@ -398,7 +394,42 @@ class AdminHandler:
         # Start broadcast
         asyncio.create_task(self._execute_broadcast(message))
         await update.message.reply_text("📢 Broadcast started.")
-
+    
+    async def handle_callback(self, update: Update, context: CallbackContext) -> None:
+    	query = update.callback_query
+    	# Extract the action from callback data
+    	# Format: admin:action or just admin_action
+    	data = query.data
+    	
+    	# Handle different callback data formats
+    	if data.startswith('admin:'):
+    		action = data.split(':', 1)[1] if ':' in data else ''
+    	else:
+    		action = data.replace('admin_', '', 1)
+    	logger.debug(f"Admin callback - action: {action}")
+    	
+    	# Route to appropriate handler
+    	if action == 'users':
+    		await self._show_user_management(update, context)
+    	elif action == 'broadcast':
+    		await self._start_broadcast(update, context)
+    	elif action == 'stats':
+    		await self._show_system_stats(update, context)
+    	elif action == 'alerts':
+    		await self._show_alerts(update, context)
+    	elif action == 'back':
+    		# Go back to main dashboard
+    		await self.dashboard(update, context)
+    	elif action == 'close':
+    		await query.edit_message_text("👑 Admin session ended.")
+    		context.user_data.clear()
+    		# End conversation
+    	elif action.startswith('user_'):
+    		# Re-route to user management handler
+    		await self.handle_user_management(update, context)
+    	else:
+    		await query.answer(f"Unknown admin action: {action}")
+    	
     def get_states(self):
         """Return conversation states using bound instance methods"""
         # Defined after class so AdminHandler is in scope
