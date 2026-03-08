@@ -63,15 +63,15 @@ class SettingsHandler:
         action = query.data.replace('settings_', '')
         
         if action == 'risk':
-            return self._show_risk_settings(update, context)
+            return await self._show_risk_settings(update, context)
         elif action == 'notifications':
-            return self._show_notification_settings(update, context)
+            return await self._show_notification_settings(update, context)
         elif action == 'symbols':
-            return self._show_symbol_settings(update, context)
+            return await self._show_symbol_settings(update, context)
         elif action == 'connection':
-            return self._show_connection_settings(update, context)
+            return await self._show_connection_settings(update, context)
         elif action == 'api':
-            return self._show_api_settings(update, context)
+            return await self._show_api_settings(update, context)
         elif action == 'back':
             await query.edit_message_text(
                 self._format_settings_summary(
