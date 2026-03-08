@@ -133,7 +133,7 @@ class SettingsHandler:
             return CONFIRM_UPDATE
         
         elif action == 'back':
-            return self._show_risk_settings(update, context)
+            return await self._show_risk_settings(update, context)
     
     async def _show_notification_settings(self, update: Update, context: CallbackContext) -> int:
         """Show notification settings menu"""
@@ -180,11 +180,11 @@ class SettingsHandler:
             context.user_data['awaiting'] = 'notify_hour'
             return CONFIRM_UPDATE
         elif action == 'back':
-            return self._show_notification_settings(update, context)
+            return await self._show_notification_settings(update, context)
         
         # Save and refresh
         self.db.commit()
-        return self._show_notification_settings(update, context)
+        return await self._show_notification_settings(update, context)
     
     async def _show_symbol_settings(self, update: Update, context: CallbackContext) -> int:
         """Show symbol filtering settings"""
