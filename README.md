@@ -77,10 +77,13 @@ source fx/bin/activate
 fx\Scripts\activate
 ```
 **4. Install dependencies**
+
 ‎```
 ‎make install
 ‎```
+
 **or**
+
 ```
 pip install -r requirements.txt
 ```
