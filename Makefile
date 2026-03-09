@@ -56,7 +56,7 @@ clean:
 	find . -type d -name ".mypy_cache" -exec rm -rf {} +
 
 docker-up:
-	docker-compose up -d
+	# docker-compose up -d
     sudo docker-compose up -d postgres redis
 
 docker-down:
