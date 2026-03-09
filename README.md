@@ -78,9 +78,11 @@ fx\Scripts\activate
 ```
 **4. Install dependencies**
 
+
 ‎```
 ‎make install
 ‎```
+
 
 **or**
 
@@ -103,6 +105,13 @@ nano .env
 sudo docker-compose up -d postgres redis
 ```
 **8. Run migrations**
+
+```
+make migrate
+```
+
+**or**
+
 ```
 alembic upgrade head
 ```
