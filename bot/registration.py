@@ -33,9 +33,12 @@ class RegistrationHandler:
         
         # Gateway config
         self.gateway_config = GatewayConfig(
-            host=GATEWAY_CONFIG['host'],
-            port=GATEWAY_CONFIG['port'],
-            api_key_header=GATEWAY_CONFIG.get('api_key_header', 'X-API-Key')
+            host=settings.GATEWAY_HOST,
+            port=settings.GATEWAY_PORT,
+            api_key_header=settings.GATEWAY_API_KEY_HEADER,
+            connect_timeout=settings.GATEWAY_CONNECT_TIMEOUT,
+            request_timeout=settings.GATEWAY_REQUEST_TIMEOUT
+        )
     
     async def initialize(self):
         """Initialize the execution provider"""

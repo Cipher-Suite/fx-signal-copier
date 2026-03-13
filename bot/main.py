@@ -196,7 +196,7 @@ class Bot:
         	logger.info("MT5 connection manager is ready")
         	
         	# Initialize execution provider
-        	await self.execution_provider.initialize(GATEWAY_CONFIG)
+        	await self.execution_provider.initialize(settings.gateway_config)
         	
         	# Inject shared mt5_manager into handlers that need it
         	self.registration.execution_provider = self.execution_provider
