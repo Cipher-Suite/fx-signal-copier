@@ -85,7 +85,7 @@ class Bot:
         self._setup_handlers()
         
         # Initialize execution provider
-        self.execution_provider = ExecutionProvider(use_gateway=USE_GATEWAY)
+        self.execution_provider = ExecutionProvider(use_gateway=settings.USE_GATEWAY)
 
     def _setup_middleware(self):
         self.application.add_error_handler(self.error_handler.handle)
