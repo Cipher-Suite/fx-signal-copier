@@ -237,8 +237,14 @@ class Settings(BaseSettings):
     ENABLE_API_ACCESS: bool = Field(True, validation_alias='ENABLE_API_ACCESS')
     ENABLE_WEBHOOKS: bool = Field(False, validation_alias='ENABLE_WEBHOOKS')
     ENABLE_MULTIPLE_TPS: bool = Field(True, validation_alias='ENABLE_MULTIPLE_TPS')
-    USE_GATEWAY = os.getenv('USE_GATEWAY', 'true').lower() == 'true'
-    GATEWAY_ONLY = os.getenv('GATEWAY_ONLY', 'false').lower() == 'true'
+    USE_GATEWAY: bool = Field(
+        default=True,
+        validation_alias='USE_GATEWAY'
+    )
+    GATEWAY_ONLY: bool = Field(
+        default=False,
+        validation_alias='GATEWAY_ONLY'
+    )
     
     # Payment Processing (if using Stripe)
     STRIPE_API_KEY: Optional[str] = Field(None, validation_alias='STRIPE_API_KEY')
