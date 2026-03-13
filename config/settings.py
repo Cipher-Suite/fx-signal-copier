@@ -6,7 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import field_validator, Field
 from dotenv import load_dotenv
 
-from gateway_client import GatewayConfig
+#from gateway_client import GatewayConfig
 
 # Load environment variables from .env file
 load_dotenv()
