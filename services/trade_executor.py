@@ -1,4 +1,7 @@
 # fx/services/trade_executor.py
+"""
+Trade executor service.
+"""
 import asyncio
 from typing import Dict, Any, Optional, List
 from datetime import datetime
@@ -8,7 +11,6 @@ from sqlalchemy.orm import Session
 from core.models import TradeSignal, CalculatedTrade
 from services.signal_processor import SignalProcessor
 #from core.parser import SignalParser
-from services.mt5_manager import MT5ConnectionManager
 from services.risk_service import RiskService
 from services.subscription import SubscriptionService
 from services.notification import NotificationService
@@ -24,7 +26,7 @@ class TradeExecutionError(Exception):
 
 
 class TradeExecutor:
-    def __init__(self, db_session: Session, bot=None, mt5_manager=None):
+    def __init__(self, db_session: Session, bot=None, mt5_manager=None, execution_provider=None):
         self.db = db_session
         self.bot = bot
         
@@ -35,12 +37,27 @@ class TradeExecutor:
         self.risk_service = RiskService()
         self.sub_service = SubscriptionService(db_session)
         self.notification = NotificationService(db_session, bot)
-        self.mt5_manager = mt5_manager
         self.trade_repo = TradeRepository(db_session)
         self.user_repo = UserRepository(db_session)
         
+        # Execution provider (preferred) or direct mt5_manager (legacy fallback)
+        self.execution_provider = execution_provider
+        self.mt5_manager = mt5_manager
+        
         # Track in-progress trades
         self.pending_trades = {}
+    
+    async def _get_connection(self, user_id: int):
+        """
+        Get a connection through ExecutionProvider (preferred) or mt5_manager (fallback).
+        This is the single point where all connection routing happens.
+        """
+        if self.execution_provider:
+            return await self.execution_provider.get_connection(user_id)
+        elif self.mt5_manager:
+            return await self.mt5_manager.get_connection(user_id)
+        else:
+            raise TradeExecutionError("No execution provider or MT5 manager available")
     
     async def execute_trade(self, user_id: int, signal_text: str, 
                            context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -82,8 +99,8 @@ class TradeExecutor:
             if not user:
                 raise TradeExecutionError("User not found")
             
-            # Step 4: Get MT5 connection
-            connection = await self.mt5_manager.get_connection(user_id)
+            # Step 4: Get connection via ExecutionProvider
+            connection = await self._get_connection(user_id)
             account_info = await connection.get_account_information()
             
             # Step 5: Get current price if market order
@@ -256,39 +273,38 @@ class TradeExecutor:
                 
                 user = user_repo.get_by_telegram_id(user_id)
                 if user:
-                	failed_trade = Trade(
-                	    user_id=user.id,
-                	    order_type='unknown',
-                	    symbol='unknown',
-                	    entry_price=0,
-                	    stop_loss=0,
-                	    take_profits=[0],
-                	    position_size=0,
-                	    risk_percentage=0,
-                	    risk_amount=0,
-                	    potential_reward=0,
-                	    status='failed',
-                	    error_message=str(e)[:500],
-                	    signal_text=signal_text
-                	)
-                	error_session.add(failed_trade)
-                	error_session.commit()
-                	logger.info(f"Failed trade logged for user {user_id}")
-                	self.db.commit()
+                    failed_trade = Trade(
+                        user_id=user.id,
+                        order_type='unknown',
+                        symbol='unknown',
+                        entry_price=0,
+                        stop_loss=0,
+                        take_profits=[0],
+                        position_size=0,
+                        risk_percentage=0,
+                        risk_amount=0,
+                        potential_reward=0,
+                        status='failed',
+                        error_message=str(e)[:500],
+                        signal_text=signal_text
+                    )
+                    error_session.add(failed_trade)
+                    error_session.commit()
+                    logger.info(f"Failed trade logged for user {user_id}")
+                    self.db.commit()
             except Exception as db_error:
-            	logger.error(f"Failed to save failed trade: {db_error}")
-            	error_session.rollback()
+                logger.error(f"Failed to save failed trade: {db_error}")
+                error_session.rollback()
             finally:
-            	error_session.close()
+                error_session.close()
             
             # Send error notification (this will use its own session internally)
             try:
-            	await self.notification.notify_trade_failed(user_id, str(e), {
-            	    'signal': signal_text[:100]
-            	})
+                await self.notification.notify_trade_failed(user_id, str(e), {
+                    'signal': signal_text[:100]
+                })
             except Exception as notify_error:
                 logger.error(f"Failed to send error notification: {notify_error}")
-               # pass
             
             return {
                 'success': False,
@@ -349,8 +365,8 @@ class TradeExecutor:
             if not user:
                 raise TradeExecutionError("User not found")
             
-            # Get MT5 connection for balance
-            connection = await self.mt5_manager.get_connection(user_id)
+            # Get connection via ExecutionProvider
+            connection = await self._get_connection(user_id)
             account_info = await connection.get_account_information()
             
             # Get current price if market order
@@ -410,8 +426,9 @@ class TradeExecutor:
     async def close_trade(self, user_id: int, position_id: str) -> Dict[str, Any]:
         """Close an open position"""
         try:
-            connection = await self.mt5_manager.get_connection(user_id)
-            success = await self.mt5_manager.close_position(user_id, position_id)
+            # Get connection via ExecutionProvider — uses the adapter's close_position
+            connection = await self._get_connection(user_id)
+            success = await connection.close_position(position_id)
             
             if success:
                 # Update trade record
@@ -445,8 +462,9 @@ class TradeExecutor:
                           sl: Optional[float] = None, tp: Optional[float] = None) -> Dict[str, Any]:
         """Modify stop loss and take profit"""
         try:
-            connection = await self.mt5_manager.get_connection(user_id)
-            success = await self.mt5_manager.modify_position(user_id, position_id, sl, tp)
+            # Get connection via ExecutionProvider — uses the adapter's modify_position
+            connection = await self._get_connection(user_id)
+            success = await connection.modify_position(position_id, sl=sl, tp=tp)
             
             if success:
                 return {
