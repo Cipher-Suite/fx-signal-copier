@@ -249,6 +249,9 @@ class GatewayClient:
         self._reconnect_task: Optional[asyncio.Task] = None
         self._reconnect_attempts = 0
         
+        # Price cache — populated by WebSocket tick stream, read by get_symbol_price
+        self._price_cache: Dict[str, Dict[str, float]] = {}
+        
         logger.info(f"Gateway client initialized for {self.config.base_url}")
     
     async def __aenter__(self):
@@ -554,6 +557,27 @@ class GatewayClient:
     
     # ==================== WebSocket ====================
     
+    async def get_symbol_info(self, symbol: str) -> Dict[str, Any]:
+    	"""
+        Get symbol information from gateway.
+        Returns symbol details including current price data.
+        """
+        if not self.http_client:
+        	raise GatewayError("Client not started")
+        	
+        try:
+        	response = await self.http_client.get(
+        	    f"/api/symbols/{symbol}",
+        	    headers=self._get_headers()
+        	)
+        	response.raise_for_status()
+        	return response.json()
+        except httpx.HTTPStatusError as e:
+        	if e.response.status_code == 401:
+        		raise AuthenticationError("Invalid API key")
+        		logger.error(f"Failed to get symbol info: {e}")
+        		raise GatewayError(f"Symbol info failed: {e.response.text}")
+    
     async def connect_websocket(self):
         """Establish WebSocket connection for real-time data"""
         if self.ws_connection and not self.ws_connection.closed:
@@ -650,6 +674,14 @@ class GatewayClient:
             volume=data['volume'],
             time=data['time']
         )
+        
+        # Update price cache for get_symbol_price lookups
+        self._price_cache[tick.symbol] = {
+            'bid': tick.bid,
+            'ask': tick.ask,
+            'last': tick.last,
+            'time': tick.time
+        }
         
         # Call callbacks
         if tick.symbol in self.tick_callbacks:

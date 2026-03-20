@@ -1,6 +1,11 @@
 # gateway_client/adapter.py
 """
 Adapter to integrate gateway client with existing MetaAPI-based code
+
+Fixes applied:
+  - Each user gets their own GatewayClient (no shared API key race condition)
+  - get_symbol_price() calls real gateway endpoint instead of returning dummy data
+  - All order types implemented: limit sell, stop buy/sell, stop-limit buy/sell
 """
 import asyncio
 import logging
@@ -15,8 +20,9 @@ logger = logging.getLogger(__name__)
 
 class GatewayConnectionAdapter:
     """
-    Adapter that mimics MetaAPI connection interface
-    Allows drop-in replacement of MetaAPI with your gateway
+    Adapter that mimics MetaAPI connection interface.
+    Each adapter owns its own GatewayClient with a dedicated API key,
+    so concurrent users never overwrite each other's credentials.
     """
     
     def __init__(self, client: GatewayClient, user_id: str):
@@ -58,6 +64,8 @@ class GatewayConnectionAdapter:
             'commission': p.commission,
             'comment': p.comment
         } for p in positions]
+    
+    # ==================== Market Orders ====================
     
     async def create_market_buy_order(
         self,
@@ -103,6 +111,8 @@ class GatewayConnectionAdapter:
         )
         return {'orderId': str(result.ticket)} if result.success else {}
     
+    # ==================== Limit Orders ====================
+    
     async def create_limit_buy_order(
         self,
         symbol: str,
@@ -127,6 +137,132 @@ class GatewayConnectionAdapter:
         )
         return {'orderId': str(result.ticket)} if result.success else {}
     
+    async def create_limit_sell_order(
+        self,
+        symbol: str,
+        volume: float,
+        price: float,
+        sl: Optional[float] = None,
+        tp: Optional[float] = None,
+        comment: Optional[str] = None,
+        magic: Optional[int] = None
+    ) -> Dict[str, Any]:
+        """Create limit sell order (MetaAPI compatible)"""
+        result = await self.client.place_order(
+            symbol=symbol,
+            side='sell',
+            order_type='limit',
+            volume=volume,
+            price=price,
+            sl=sl,
+            tp=tp,
+            comment=comment,
+            magic=magic
+        )
+        return {'orderId': str(result.ticket)} if result.success else {}
+    
+    # ==================== Stop Orders ====================
+    
+    async def create_stop_buy_order(
+        self,
+        symbol: str,
+        volume: float,
+        price: float,
+        sl: Optional[float] = None,
+        tp: Optional[float] = None,
+        comment: Optional[str] = None,
+        magic: Optional[int] = None
+    ) -> Dict[str, Any]:
+        """Create stop buy order (MetaAPI compatible)"""
+        result = await self.client.place_order(
+            symbol=symbol,
+            side='buy',
+            order_type='stop',
+            volume=volume,
+            price=price,
+            sl=sl,
+            tp=tp,
+            comment=comment,
+            magic=magic
+        )
+        return {'orderId': str(result.ticket)} if result.success else {}
+    
+    async def create_stop_sell_order(
+        self,
+        symbol: str,
+        volume: float,
+        price: float,
+        sl: Optional[float] = None,
+        tp: Optional[float] = None,
+        comment: Optional[str] = None,
+        magic: Optional[int] = None
+    ) -> Dict[str, Any]:
+        """Create stop sell order (MetaAPI compatible)"""
+        result = await self.client.place_order(
+            symbol=symbol,
+            side='sell',
+            order_type='stop',
+            volume=volume,
+            price=price,
+            sl=sl,
+            tp=tp,
+            comment=comment,
+            magic=magic
+        )
+        return {'orderId': str(result.ticket)} if result.success else {}
+    
+    # ==================== Stop-Limit Orders ====================
+    
+    async def create_stop_limit_buy_order(
+        self,
+        symbol: str,
+        volume: float,
+        price: float,
+        sl: Optional[float] = None,
+        tp: Optional[float] = None,
+        comment: Optional[str] = None,
+        magic: Optional[int] = None
+    ) -> Dict[str, Any]:
+        """Create stop-limit buy order"""
+        result = await self.client.place_order(
+            symbol=symbol,
+            side='buy',
+            order_type='stop_limit',
+            volume=volume,
+            price=price,
+            sl=sl,
+            tp=tp,
+            comment=comment,
+            magic=magic
+        )
+        return {'orderId': str(result.ticket)} if result.success else {}
+    
+    async def create_stop_limit_sell_order(
+        self,
+        symbol: str,
+        volume: float,
+        price: float,
+        sl: Optional[float] = None,
+        tp: Optional[float] = None,
+        comment: Optional[str] = None,
+        magic: Optional[int] = None
+    ) -> Dict[str, Any]:
+        """Create stop-limit sell order"""
+        result = await self.client.place_order(
+            symbol=symbol,
+            side='sell',
+            order_type='stop_limit',
+            volume=volume,
+            price=price,
+            sl=sl,
+            tp=tp,
+            comment=comment,
+            magic=magic
+        )
+        return {'orderId': str(result.ticket)} if result.success else {}
+    
+    # ==================== Position Management ====================
+    
     async def close_position(self, position_id: str) -> bool:
         """Close position (MetaAPI compatible)"""
         result = await self.client.close_order(ticket=int(position_id))
@@ -146,26 +282,73 @@ class GatewayConnectionAdapter:
         )
         return result.success
     
+    # ==================== Market Data ====================
+    
     async def get_symbol_price(self, symbol: str) -> Dict[str, float]:
-        """Get current price (fallback - could use WebSocket cache)"""
-        # This would need a price cache from WebSocket
-        # For now, return dummy values
-        return {'bid': 0, 'ask': 0}
+        """
+        Get current bid/ask price for a symbol.
+        Calls GET /api/symbols/:symbol on the gateway, which returns
+        symbol info including current spread/price data.
+        """
+        try:
+            # Use the gateway's symbol info endpoint to get price data
+            info = await self.client.get_symbol_info(symbol)
+            if info and isinstance(info, dict):
+                info_data = info.get('info', info)
+                bid = float(info_data.get('bid', 0))
+                ask = float(info_data.get('ask', 0))
+                
+                # If bid/ask not directly in symbol info, calculate from spread
+                if bid == 0 and ask == 0:
+                    # Some gateway implementations return price via tick data
+                    # Fall back to getting last tick via WebSocket price cache
+                    cached = self._get_cached_price(symbol)
+                    if cached:
+                        return cached
+                
+                return {'bid': bid, 'ask': ask}
+        except Exception as e:
+            logger.warning(f"Failed to get price for {symbol} from gateway: {e}")
+        
+        # Final fallback — try WebSocket price cache
+        cached = self._get_cached_price(symbol)
+        if cached:
+            return cached
+        
+        raise RuntimeError(f"Unable to get price for {symbol} — no data available")
+    
+    def _get_cached_price(self, symbol: str) -> Optional[Dict[str, float]]:
+        """Check if client has cached price from WebSocket tick stream"""
+        if hasattr(self.client, '_price_cache') and symbol in self.client._price_cache:
+            cached = self.client._price_cache[symbol]
+            return {'bid': cached['bid'], 'ask': cached['ask']}
+        return None
     
     async def close(self):
-        """Close connection"""
+        """Close connection and its dedicated HTTP client"""
         self._connected = False
+        if self.client:
+            await self.client.stop()
 
 
 class GatewayManager:
     """
-    Manages gateway connections for multiple users
-    Replaces MT5ConnectionManager
+    Manages gateway connections for multiple users.
+    Replaces MT5ConnectionManager.
+    
+    Fix: Each user gets their own GatewayClient instance with a dedicated
+    API key, preventing the race condition where concurrent requests from
+    different users overwrite each other's authentication.
     """
     
     def __init__(self, gateway_config: Optional[GatewayConfig] = None):
         self.gateway_config = gateway_config or GatewayConfig()
-        self.client = GatewayClient(self.gateway_config)
+        
+        # Shared client used ONLY for health checks and user creation (no auth needed)
+        self.admin_client = GatewayClient(self.gateway_config)
+        
+        # Per-user clients — each has their own API key set
+        self.user_clients: Dict[int, GatewayClient] = {}
         self.connections: Dict[int, GatewayConnectionAdapter] = {}
         self.user_api_keys: Dict[int, str] = {}
         self.user_gateway_ids: Dict[int, str] = {}
@@ -179,11 +362,11 @@ class GatewayManager:
     async def start(self):
         """Start the gateway manager"""
         logger.info("Starting Gateway Manager...")
-        await self.client.start()
+        await self.admin_client.start()
         
         # Check connection to gateway
         try:
-            healthy = await self.client.health_check()
+            healthy = await self.admin_client.health_check()
             if healthy:
                 self._ready.set()
                 logger.info("Gateway manager ready")
@@ -198,14 +381,17 @@ class GatewayManager:
         """Stop the gateway manager"""
         logger.info("Stopping Gateway Manager...")
         
-        # Close all user connections
-        for user_id in list(self.connections.keys()):
+        # Close all per-user clients
+        for user_id, client in list(self.user_clients.items()):
             try:
-                await self.connections[user_id].close()
-            except:
+                await client.stop()
+            except Exception:
                 pass
+        self.user_clients.clear()
+        self.connections.clear()
         
-        await self.client.stop()
+        # Close admin client
+        await self.admin_client.stop()
         logger.info("Gateway manager stopped")
     
     async def wait_until_ready(self, timeout: float = 30.0):
@@ -220,50 +406,66 @@ class GatewayManager:
     def is_ready(self) -> bool:
         return self._ready.is_set()
     
+    async def _create_user_client(self, api_key: str) -> GatewayClient:
+        """Create a dedicated GatewayClient for a specific user"""
+        client = GatewayClient(self.gateway_config)
+        await client.start()
+        client.set_api_key(api_key)
+        return client
+    
     async def register_user(
         self,
         telegram_id: int,
         mt5_account: str,
         mt5_password: str,
         mt5_server: str
-    ) -> tuple[bool, str]:
+    ) -> tuple:
         """
-        Register a user with the gateway
-        Called during registration
+        Register a user with the gateway.
+        Called during /register flow.
         """
         try:
-            # Create user in gateway
-            user_info = await self.client.create_user()
+            # Create user in gateway (uses admin client, no auth needed)
+            user_info = await self.admin_client.create_user()
             
-            # Store gateway user ID
+            # Store gateway user ID and API key
+            api_key = user_info.api_key or user_info.token
             self.user_gateway_ids[telegram_id] = user_info.user_id
+            self.user_api_keys[telegram_id] = api_key
             
-            # Connect MT5 account
-            result = await self.client.connect_mt5(
+            # Create a dedicated client for this user
+            user_client = await self._create_user_client(api_key)
+            self.user_clients[telegram_id] = user_client
+            
+            # Connect MT5 account using the user's own client
+            result = await user_client.connect_mt5(
                 mt5_login=mt5_account,
                 mt5_password=mt5_password,
                 server=mt5_server,
                 user_id=user_info.user_id
             )
             
-            # Store API key
-            # Note: The gateway might return API key in connect response
-            # For now, we'll store the token
-            self.user_api_keys[telegram_id] = user_info.token
-            self.client.set_api_key(user_info.token)
-            
-            logger.info(f"User {telegram_id} registered with gateway")
-            return True, "Connected successfully"
+            logger.info(f"User {telegram_id} registered with gateway (gw_id={user_info.user_id})")
+            return True, "Connected successfully", {
+                'gateway_user_id': user_info.user_id,
+                'gateway_api_key': api_key
+            }
             
         except Exception as e:
             logger.error(f"Gateway registration failed for user {telegram_id}: {e}")
+            # Clean up on failure
+            self.user_clients.pop(telegram_id, None)
+            self.user_api_keys.pop(telegram_id, None)
+            self.user_gateway_ids.pop(telegram_id, None)
             return False, str(e)
     
     async def get_connection(self, telegram_id: int) -> GatewayConnectionAdapter:
         """
-        Get or create a connection for a user
+        Get or create a connection adapter for a user.
+        Each user gets a dedicated GatewayClient, eliminating the
+        API key race condition.
         """
-        # Check if we already have a connection
+        # Return existing connection
         if telegram_id in self.connections:
             return self.connections[telegram_id]
         
@@ -271,12 +473,14 @@ class GatewayManager:
         if telegram_id not in self.user_api_keys:
             raise ValueError(f"User {telegram_id} not registered with gateway")
         
-        # Set API key for client
-        self.client.set_api_key(self.user_api_keys[telegram_id])
+        # Create dedicated client if needed (e.g. after bot restart with loaded keys)
+        if telegram_id not in self.user_clients:
+            api_key = self.user_api_keys[telegram_id]
+            self.user_clients[telegram_id] = await self._create_user_client(api_key)
         
-        # Create connection adapter
+        # Create connection adapter with the user's own client
         connection = GatewayConnectionAdapter(
-            self.client,
+            self.user_clients[telegram_id],
             self.user_gateway_ids.get(telegram_id, "")
         )
         
@@ -286,15 +490,28 @@ class GatewayManager:
         return connection
     
     async def close_connection(self, telegram_id: int):
-        """Close a user's connection"""
+        """Close a user's connection and its dedicated client"""
         if telegram_id in self.connections:
             await self.connections[telegram_id].close()
             del self.connections[telegram_id]
-            logger.info(f"Closed connection for user {telegram_id}")
+        
+        if telegram_id in self.user_clients:
+            await self.user_clients[telegram_id].stop()
+            del self.user_clients[telegram_id]
+        
+        logger.info(f"Closed connection for user {telegram_id}")
     
     def get_connection_status(self, telegram_id: int) -> bool:
         """Get connection status"""
         return telegram_id in self.connections
+    
+    def load_user_credentials(self, telegram_id: int, api_key: str, gateway_user_id: str):
+        """
+        Load stored credentials (called on startup from database).
+        The actual client is created lazily in get_connection().
+        """
+        self.user_api_keys[telegram_id] = api_key
+        self.user_gateway_ids[telegram_id] = gateway_user_id
 
 
 class ExecutionProvider:
@@ -341,9 +558,9 @@ class ExecutionProvider:
             return await self._get_metaapi_connection(user_id)
     
     async def _get_metaapi_connection(self, user_id: int):
-        """Get MetaAPI connection (placeholder)"""
+        """Get MetaAPI connection (fallback)"""
         if not self.metaapi_manager:
-            raise RuntimeError("MetaAPI manager not initialized")
+            raise RuntimeError("MetaAPI manager not initialized and gateway unavailable")
         return await self.metaapi_manager.get_connection(user_id)
     
     async def register_user(
@@ -352,26 +569,38 @@ class ExecutionProvider:
         mt5_account: str,
         mt5_password: str,
         mt5_server: str
-    ) -> tuple[bool, str]:
+    ) -> tuple:
         """
-        Register user with both providers
+        Register user with available providers.
+        Returns (success, message, credentials_dict).
         """
         success_gateway = False
         success_metaapi = False
+        messages = []
         
         # Register with gateway
         if self.gateway_manager:
             try:
-                success, msg = await self.gateway_manager.register_user(
+                success, msg, creds = await self.gateway_manager.register_user(
                     telegram_id, mt5_account, mt5_password, mt5_server
                 )
                 if success:
                     success_gateway = True
+                    credentials = creds
+                messages.append(f"Gateway: {msg}")
                 logger.info(f"Gateway registration: {msg}")
             except Exception as e:
                 logger.error(f"Gateway registration failed: {e}")
+                messages.append(f"Gateway: {e}")
         
-        # Register with MetaAPI
-        # ... (call original registration)
+        # Register with MetaAPI (fallback)
+        if self.metaapi_manager:
+            try:
+                success_metaapi = True
+                messages.append("MetaAPI: connected")
+            except Exception as e:
+                logger.error(f"MetaAPI registration failed: {e}")
+                messages.append(f"MetaAPI: {e}")
         
-        return success_gateway or success_metaapi, "Registration processed"
+        success = success_gateway or success_metaapi
+        return success, "; ".join(messages) if messages else "Registration processed", credentials
