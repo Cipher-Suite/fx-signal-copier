@@ -194,43 +194,70 @@ class CommandHandlers:
         await update.message.reply_text(profile_text, parse_mode=ParseMode.MARKDOWN)
     
     async def upgrade(self, update: Update, context: CallbackContext):
-        """Handle /upgrade command"""
+        """Handle /upgrade command — shows plans dynamically from database"""
         from bot.keyboards import get_plans_keyboard
         
-        plans_text = (
-            "*📊 Subscription Plans*\n\n"
-            "Choose a plan that fits your trading style:\n\n"
+        # Get user's current plan
+        user_id = update.effective_user.id
+        user = self.user_repo.get_by_telegram_id(user_id)
+        current_tier = user.subscription_tier if user else 'free'
+        
+        # Fetch all plans from database
+        plans = self.sub_service.get_all_plans()
+        
+        if not plans:
+            await update.message.reply_text(
+                "❌ No subscription plans available. Please contact support."
+            )
+            return
+        
+        # Sort plans by price
+        plans.sort(key=lambda p: float(p.price_monthly))
+        
+        # Build dynamic plan display
+        text = "*📊 Subscription Plans*\n\n"
+        
+        for plan in plans:
+            # Current plan indicator
+            current = " ← *Your Plan*" if plan.tier == current_tier else ""
             
-            "*Free Plan*\n"
-            "• 10 trades per day\n"
-            "• 1.0 max position size\n"
-            "• Basic features\n"
-            "• Price: $0\n\n"
+            # Price display
+            if plan.is_free:
+                price_str = "Free"
+            else:
+                price_str = f"${plan.price_monthly}/month · ${plan.price_yearly}/year"
             
-            "*Basic Plan*\n"
-            "• 50 trades per day\n"
-            "• 5.0 max position size\n"
-            "• Multiple TPs\n"
-            "• Priority support\n"
-            "• Price: $9.99/month\n\n"
+            text += f"*{plan.name} Plan*{current}\n"
+            text += f"💰 {price_str}\n"
+            text += f"• {plan.max_trades_per_day} trades per day\n"
+            text += f"• {plan.max_position_size} max position size\n"
             
-            "*Pro Plan*\n"
-            "• 200 trades per day\n"
-            "• 10.0 max position size\n"
-            "• Auto-trading\n"
-            "• API access\n"
-            "• Price: $29.99/month\n\n"
+            if plan.supports_multiple_tps:
+                text += "• ✅ Multiple TPs\n"
+            if plan.supports_auto_trading:
+                text += "• ✅ Auto-trading\n"
+            if plan.supports_api:
+                text += "• ✅ API access\n"
+            if plan.max_connections > 1:
+                text += f"• {plan.max_connections} MT5 accounts\n"
+            if plan.support_priority == 'high':
+                text += "• ⚡ Priority support\n"
             
-            "*Enterprise Plan*\n"
-            "• Unlimited trades\n"
-            "• 50.0 max position size\n"
-            "• Multiple accounts\n"
-            "• Custom features\n"
-            "• Price: $99.99/month"
-        )
+            text += "\n"
+        
+        # Add expiry info if user has paid plan
+        if user and user.subscription_expiry and current_tier != 'free':
+            from datetime import datetime
+            days_left = (user.subscription_expiry - datetime.utcnow()).days
+            if days_left > 0:
+                text += f"_Your {current_tier.title()} plan expires in {days_left} days_\n\n"
+            else:
+                text += "_⚠️ Your plan has expired_\n\n"
+        
+        text += "Select a plan to see details:"
         
         await update.message.reply_text(
-            plans_text,
+            text,
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=get_plans_keyboard()
         )
