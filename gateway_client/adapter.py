@@ -425,6 +425,17 @@ class GatewayManager:
         Called during /register flow.
         """
         try:
+            try:
+            	from services.subscription import SubscriptionService
+            	from database.database import db_manager
+            	sub_service = SubscriptionService(db_manager.get_session())
+            	plan = sub_service.get_user_plan(telegram_id)
+            	current_connections = len([uid for uid in self.user_clients if uid == telegram_id])
+            	if plan and plan.max_connections and current_connections >= plan.max_connections:
+            		return False, f"Connection limit reached ({plan.max_connections} for {plan.tier} plan)", {}
+            except Exception as e:
+            	logger.warning(f"Could not check connection limit: {e}")
+            	
             # Create user in gateway (uses admin client, no auth needed)
             user_info = await self.admin_client.create_user()
             
