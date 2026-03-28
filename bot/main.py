@@ -277,52 +277,48 @@ class Bot:
 
 
     async def _post_shutdown(self, application):
-        """Properly shut down all services and background tasks"""
-        logger.info("Shutting down services...")
-       
-        # Cancel all background tasks first
-        logger.info("Cancelling background tasks...")
-        
-        # Get all running tasks (excluding the current one)
-        tasks = [t for t in asyncio.all_tasks() 
-             if t is not asyncio.current_task()]
-        
+        """Shut down all services — fast and clean"""
+        logger.info("Shutting down...")
+
+        # 1. Cancel all background tasks immediately
+        tasks = [t for t in asyncio.all_tasks()
+                 if t is not asyncio.current_task() and not t.done()]
+
+        for task in tasks:
+            task.cancel()
+
         if tasks:
-        	# Cancel all tasks
-        	for task in tasks:
-        		task.cancel()
-        	
-        	# Wait for tasks to complete with timeout
-        	logger.info(f"Waiting for {len(tasks)} tasks to complete...")
-        	try:
-        		await asyncio.wait_for(asyncio.gather(*tasks, return_exceptions=True), timeout=5.0)
-        	except asyncio.TimeoutError:
-        		logger.warning(f"Some tasks did not complete within timeout")
-        	except Exception as e:
-        		logger.error(f"Error during task cleanup: {e}")
-        
-        # Stop MT5 connection manager
-        
+            # Give tasks 2 seconds to finish, then move on
+            done, pending = await asyncio.wait(tasks, timeout=2.0)
+            if pending:
+                logger.warning(f"{len(pending)} tasks didn't stop in time — forcing")
+
+        # 2. Stop MT5 connection manager
         if self.mt5_manager:
-        	logger.info("Stopping MT5 Connection Manager...")
-        	try:
-        		await asyncio.wait_for(self.mt5_manager.stop(), timeout=5.0)
-        	except asyncio.TimeoutError:
-        		logger.warning("MT5 manager stop timed out")
-        	except Exception as e:
-        		logger.error(f"Error stopping MT5 manager: {e}")
-        
-        # Close database session
+            try:
+                await asyncio.wait_for(self.mt5_manager.stop(), timeout=2.0)
+            except Exception:
+                pass
+
+        # 3. Close Redis/cache
+        if hasattr(self, 'cache') and self.cache:
+            try:
+                await self.cache.close()
+            except Exception:
+                pass
+
+        # 4. Close database
         if self.db:
-        	logger.info("Closing database connection...")
-        	self.db.close()
-        
-        # Cancel any remaining asyncio tasks (for APScheduler)
-        for task in asyncio.all_tasks():
-        	if not task.done() and task is not asyncio.current_task():
-        		task.cancel()
-        
+            try:
+                self.db.close()
+            except Exception:
+                pass
+
         logger.info("Bot stopped successfully")
+
+        # 5. Force exit — prevents any lingering connections from hanging
+        import os
+        os._exit(0)
 
     async def _handle_callback(self, update, context):
         query = update.callback_query
