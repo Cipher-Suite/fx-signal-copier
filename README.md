@@ -20,7 +20,7 @@
 ## How It Works
 
 ```
-User sends signal ──→ Telegram Bot ──→ CipherTrade Gateway ──→ MT5 Terminal
+User sends signal ──→ Telegram Bot ──→ CipherBridge Gateway ──→ MT5 Terminal
      via Telegram        (Python)          (Rust/axum)          (via Bridge DLL)
 ```
 
@@ -226,7 +226,7 @@ TP2 1.09500
 
 | Feature | Free | Basic | Pro | Enterprise |
 |---------|------|-------|-----|------------|
-| Trades/day | 10 | 50 | 200 | Unlimited |
+| Trades/day | 5 | 10 | 20 | 50 |
 | Multiple TPs | — | ✅ | ✅ | ✅ |
 | Auto-trading | — | — | ✅ | ✅ |
 | API access | — | — | — | ✅ |
