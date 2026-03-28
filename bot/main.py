@@ -12,6 +12,8 @@ from telegram.ext import (
 from config.settings import settings
 from database.database import db_manager
 from bot.handlers import CommandHandlers
+from database.repositories import UserRepository
+from services.subscription import SubscriptionService
 from bot.registration import RegistrationHandler
 from bot.trading import TradingHandler
 from bot.settings import SettingsHandler
@@ -46,6 +48,8 @@ class Bot:
         self.mt5_manager = None 
         # Initialize all handler objects synchronously — no async needed yet
         self.command_handlers = CommandHandlers(self.db, None)   # bot set after build
+        self.user_repo = UserRepository(self.db)
+        self.sub_service = SubscriptionService(self.db)
         self.registration     = RegistrationHandler(self.db, None, mt5_manager=None)
         self.trading          = TradingHandler(self.db, None, mt5_manager=None)
         self.settings_handler = SettingsHandler(self.db, None)
@@ -191,7 +195,7 @@ class Bot:
             app.add_handler(CommandHandler(cmd, self.auth_middleware.wrap(handler)))
 
         # Callback query router
-        app.add_handler(CallbackQueryHandler(self._handle_callback, pattern="^[a-z_]+:"))
+        app.add_handler(CallbackQueryHandler(self._handle_callback))
 
     async def _post_init(self, application):
         """Called by PTB after event loop starts — safe for async init only"""
@@ -206,22 +210,25 @@ class Bot:
         is_ready, error = await self.mt5_manager.wait_until_ready(timeout=30.0)
         
         if not is_ready:
-        	logger.error(f"MT5 connection manager failed to become ready: {error}")
-        	# Log but continue - the system will handle unready state gracefully
-        	# Don't set the event - let it fail gracefully with proper error messages
+        	logger.warning(f"MT5 connection manager not ready: {error} — continuing with gateway only")
         else:
         	logger.info("MT5 connection manager is ready")
-        	
-        	# Initialize execution provider
+
+        # Always initialize gateway — it works regardless of MetaAPI
+        try:
         	await self.execution_provider.initialize(settings.gateway_config)
-        	
-        	# Load stored gateway credentials for existing users
         	self._load_gateway_credentials()
-        	
-        	# Inject shared mt5_manager into handlers that need it
-        	self.registration.execution_provider = self.execution_provider
-        	self.trading.execution_provider = self.execution_provider
-        	self.trading.mt5_manager_ready.set()
+        except Exception as e:
+        	logger.error(f"Gateway initialization failed: {e}")
+
+        # Inject into handlers regardless of gateway success/failure
+        self.registration.execution_provider = self.execution_provider
+        self.trading.execution_provider = self.execution_provider
+        self.trading.mt5_manager_ready.set()
+        self.command_handlers.mt5_manager = self.mt5_manager
+        
+        if hasattr(self.trading, 'trade_executor') and self.trading.trade_executor:
+        	self.trading.trade_executor.mt5_manager = self.trading.mt5_manager
         	
         	if hasattr(self.trading, 'trade_executor') and self.trading.trade_executor:
         		self.trading.trade_executor.mt5_manager = self.trading.mt5_manager
@@ -382,7 +389,8 @@ class Bot:
         		
         		from bot.callbacks import CallbackHandlers
         		callbacks = CallbackHandlers(self.db, self.bot)
-        		await callbacks.handle_plan(update, context, [data.replace('plan_', '')])
+        		tier = data.replace('plan_', '')
+        		await callbacks.handle_plan(update, context, ['select', tier])
         	else:
         		await query.answer("Unknown plan action")
         

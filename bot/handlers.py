@@ -23,6 +23,7 @@ class CommandHandlers:
     def __init__(self, db_session: Session, bot):
         self.db = db_session
         self.bot = bot
+        self.mt5_manager = mt5_manager
         self.user_repo = UserRepository(db_session)
         self.trade_repo = TradeRepository(db_session)
         self.notification = NotificationService(db_session, bot)
@@ -298,5 +299,5 @@ class CommandHandlers:
         """Forward to trading handler for MT5 operations"""
         from bot.trading import TradingHandler
         
-        handler = TradingHandler(self.db, self.bot)
+        handler = TradingHandler(self.db, self.bot, mt5_manager=self.mt5_manager)
         return await handler.handle_action(update, context)

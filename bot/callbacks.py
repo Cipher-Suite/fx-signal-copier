@@ -258,15 +258,25 @@ class CallbackHandlers:
             # View position details
             position_id = args[1]
             
-            from services.mt5_manager import MT5ConnectionManager
-            mt5 = MT5ConnectionManager(self.db)
-            
             try:
-                connection = await mt5.get_connection(update.effective_user.id)
-                positions = await connection.get_positions()
+                db_user = self.user_repo.get_by_telegram_id(update.effective_user.id)
+                if not db_user or not db_user.has_gateway_credentials:
+                    await query.edit_message_text("❌ Not connected. Use /register first.")
+                    return
                 
-                position = next((p for p in positions if p['id'] == position_id), None)
+                from gateway_client.client import GatewayClient, GatewayConfig
+                from config.settings import settings
+                client = GatewayClient(settings.gateway_config)
+                await client.start()
+                client.set_api_key(db_user.gateway_api_key)
+                positions = await client.get_positions()
+                await client.stop()
+                positions = [{"id": p.ticket, "symbol": p.symbol, "type": p.type, "volume": p.volume,
+                              "openPrice": p.open_price, "currentPrice": p.current_price,
+                              "stopLoss": p.stop_loss, "takeProfit": p.take_profit,
+                              "profit": p.profit, "swap": p.swap} for p in positions]
                 
+                #i will come check here
                 if position:
                     text = (
                         f"*Position Details*\n\n"
@@ -356,24 +366,28 @@ class CallbackHandlers:
             executor = TradeExecutor(self.db, self.bot)
             
             # Get all positions
-            from services.mt5_manager import MT5ConnectionManager
-            mt5 = MT5ConnectionManager(self.db)
-            
             try:
-                connection = await mt5.get_connection(update.effective_user.id)
-                positions = await connection.get_positions()
+                db_user = self.user_repo.get_by_telegram_id(update.effective_user.id)
+                if not db_user or not db_user.has_gateway_credentials:
+                    await query.edit_message_text("❌ Not connected. Use /register first.")
+                    return
+                
+                from gateway_client.client import GatewayClient
+                from config.settings import settings
+                client = GatewayClient(settings.gateway_config)
+                await client.start()
+                client.set_api_key(db_user.gateway_api_key)
+                positions = await client.get_positions()
+                await client.stop()
                 
                 closed = 0
                 failed = 0
                 
                 for position in positions:
-                    success = await executor.close_trade(
-                        update.effective_user.id,
-                        position['id']
-                    )
-                    if success:
+                    try:
+                        result = await client.close_order(position.ticket)
                         closed += 1
-                    else:
+                    except:
                         failed += 1
                 
                 await query.edit_message_text(
