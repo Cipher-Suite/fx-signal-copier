@@ -20,7 +20,7 @@ class CommandHandlers:
     Basic command handlers (start, help, balance, etc.)
     """
     
-    def __init__(self, db_session: Session, bot):
+    def __init__(self, db_session: Session, bot, mt5_manager=None):
         self.db = db_session
         self.bot = bot
         self.mt5_manager = mt5_manager
