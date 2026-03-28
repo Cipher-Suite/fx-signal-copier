@@ -61,7 +61,7 @@ class AdminHandler:
             "Select an option:"
         )
         
-        # keyboard = get_admin_keyboard()
+        keyboard = get_admin_keyboard()
         if update.callback_query:
         	await update.callback_query.edit_message_text(
                 dashboard_text,
