@@ -68,21 +68,7 @@ class Settings(BaseSettings):
             connect_timeout=self.GATEWAY_CONNECT_TIMEOUT,
             request_timeout=self.GATEWAY_REQUEST_TIMEOUT,
         )
-    
-    # MetaAPI Configuration
-    METAAPI_TOKEN: str = Field(..., validation_alias='METAAPI_TOKEN')
-    METAAPI_ACCOUNT_ID: Optional[str] = Field(None, validation_alias='METAAPI_ACCOUNT_ID')
-    METAAPI_TIMEOUT: int = Field(30, validation_alias='METAAPI_TIMEOUT')
-    MAX_CONNECTIONS: int = Field(100, validation_alias='MAX_CONNECTIONS')
-    CONNECTION_IDLE_TIMEOUT: int = Field(300, validation_alias='CONNECTION_IDLE_TIMEOUT')
-    
-    @field_validator('METAAPI_TOKEN')
-    @classmethod
-    def validate_metaapi_token(cls, v: str) -> str:
-        if not v or len(v) < 10:
-            raise ValueError("METAAPI_TOKEN must be at least 10 characters")
-        return v
-    
+        
     # Telegram Configuration
     BOT_TOKEN: str = Field(..., validation_alias='BOT_TOKEN')
     BOT_USERNAME: Optional[str] = Field(None, validation_alias='BOT_USERNAME')
