@@ -1,5 +1,6 @@
 # fx/bot/settings.py
 import logging
+import asyncio
 from telegram import Update
 from telegram.constants import ParseMode
 from telegram.ext import ConversationHandler, CallbackContext, CallbackQueryHandler, MessageHandler, filters
