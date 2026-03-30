@@ -5,7 +5,7 @@ Gateway client package for Cipher MT5 Gateway integration
 
 from .client import (
     GatewayClient, GatewayConfig, GatewayError,
-    AuthenticationError, ConnectionError, OrderError,
+    AuthenticationError, GatewayConnectionError, OrderError,
     SubscriptionError, AccountInfo, Position, OrderResult,
     Quote, Tick, Candle, OrderType, OrderSide
 )
@@ -20,7 +20,7 @@ __all__ = [
     'GatewayConfig',
     'GatewayError',
     'AuthenticationError',
-    'ConnectionError',
+    'GatewayConnectionError',
     'OrderError',
     'SubscriptionError',
     
