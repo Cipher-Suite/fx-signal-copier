@@ -55,10 +55,6 @@ class MT5ConnectionError(ConnectionError):
     """Raised when MT5 connection fails"""
     pass
 
-class MetaAPIError(ConnectionError):
-    """Raised when MetaAPI connection fails"""
-    pass
-
 class RateLimitError(FXSignalCopierError):
     """Raised when rate limit is exceeded"""
     pass
@@ -97,4 +93,17 @@ class APIError(FXSignalCopierError):
 
 class WebhookError(FXSignalCopierError):
     """Raised for webhook processing errors"""
+    pass
+    
+class GatewayError(FXSignalCopierError):
+    """Base exception for gateway errors"""
+    pass
+
+class GatewayConnectionError(GatewayError):
+    """Connection to gateway failed"""
+    pass
+
+
+class OrderError(GatewayError):
+    """Order execution failed"""
     pass
