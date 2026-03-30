@@ -280,13 +280,28 @@ class RegistrationHandler:
 
         except Exception as e:
             logger.error(f"Registration failed for user {user_id}: {e}")
+            
+            # Clean up partial gateway credentials saved in Step 1
+            # so the user can retry cleanly with /register
+            try:
+            	self.user_repo.update_user(
+            	    user_id,
+            	    gateway_user_id=None,
+            	    gateway_api_key=None,
+            	    gateway_account_id=None,
+            	    is_verified=False,
+            	    mt_connected=False,
+            	)
+            except Exception as cleanup_err:
+            	logger.warning(f"Failed to clean up gateway credentials for user {user_id}: {cleanup_err}")
+            
             await update.callback_query.edit_message_text(
                 f"❌ *Registration error*\n\n{str(e)}",
                 parse_mode=ParseMode.MARKDOWN
             )
             context.user_data.clear()
             return ConversationHandler.END
-    
+            
     async def complete(self, update: Update, context: CallbackContext) -> int:
         """Complete registration with risk preference"""
         query = update.callback_query
