@@ -14,8 +14,8 @@ prettytable==3.10.0
 humanize==4.10.0
 
 # Security
-cryptography==46.0.6
-python-jose==3.4.0
+cryptography==43.0.0
+python-jose==3.3.0
 passlib==1.7.4
 python-dotenv==1.0.1
 pydantic==2.7.4
@@ -23,7 +23,7 @@ email-validator==2.2.0
 phonenumbers==8.13.40
 
 # Monitoring
-sentry-sdk==2.8.0
+sentry-sdk==2.6.0
 prometheus-client==0.21.0
 psutil==6.0.0
 
@@ -40,4 +40,8 @@ click==8.1.8
 colorama==0.4.6
 tqdm==4.67.1
 pydantic-settings
-PyJWT==2.11.0
+PyJWT==2.12.0
+
+# gateway-client
+httpx
+websockets
