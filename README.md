@@ -5,123 +5,81 @@
 [![Python](https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![Redis](https://img.shields.io/badge/Redis-7-DC382D?logo=redis&logoColor=white)](https://redis.io/)
-[![Telegram](https://img.shields.io/badge/Telegram-Bot-26A5E4?logo=telegram&logoColor=white)](https://t.me/TonpoBot)
+[![Telegram](https://img.shields.io/badge/Telegram-Bot-26A5E4?logo=telegram&logoColor=white)](https://t.me/BotFather)
 [![License](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
 
-**A Telegram trading bot for MetaTrader 5 powered by Tonpo Gateway. Executes forex trades automatically from signals — no third-party trading APIs, no cloud dependencies. Your credentials never leave your infrastructure.**
+**A Telegram trading bot for MetaTrader 5. Executes forex trades automatically from signals with smart risk management and subscription tiers.**
+
+*Built using the [Tonpo SDK](https://github.com/TonpoLabs/tonpo-py)*
 
 </div>
 
 ---
 
-## The Tonpo Stack
+## What is Tonpo Bot?
 
-| Component | Role |
-|---|---|
-| **Tonpo Gateway** | Rust/Axum API server on Linux VPS |
-| **Tonpo Node** | Windows agent — manages MT5 instances |
-| **Tonpo Bridge** | C++ DLL + MQL5 EA inside MT5 |
-| **Tonpo Bot** (this repo) | Telegram frontend |
-| **tonpo-py** | Python SDK used by this bot |
+Tonpo Bot is a **Telegram trading bot** that:
 
----
+- 🤖 **Executes trades automatically** — send a signal, bot executes on your MT5 instantly
+- 📊 **Smart risk management** — automatic position sizing based on your configured risk %
+- 💰 **Subscriptions** — Free, Basic, Pro, Enterprise tiers with usage limits
+- 💳 **Crypto payments** — USDT and BTC with automatic on-chain verification
+- 📈 **Live dashboard** — check balance, positions, P&L directly from Telegram
+- 🔐 **Secure** — your MT5 credentials never stored locally
 
-## How It Works
-
-```
-User sends signal
-      │
-      │  Telegram
-      ▼
-Tonpo Bot (Python)
-      │
-      │  HTTPS (tonpo-py SDK)
-      ▼
-Tonpo Gateway (Rust/axum)
-      │
-      │  WebSocket
-      ▼
-Tonpo Bridge (C++ DLL + MQL5 EA)
-      │
-      ▼
-MT5 Terminal → Broker
-```
-
-The bot parses trading signals, calculates position sizes based on risk rules, and executes trades on the user's MT5 account — all in under 2 seconds.
+This bot uses the **[Tonpo SDK](https://github.com/TonpoLabs/tonpo-py)** to communicate with the Tonpo Gateway to execute trades.
 
 ---
 
 ## Features
 
 ### Trading
-- **Automated execution** — send a signal, bot executes on MT5 instantly
-- **Smart risk management** — automatic position sizing based on balance, SL distance, and configured risk %
-- **All order types** — market, limit, stop (buy and sell)
+- **Automated execution** — send a signal, bot executes on MT5 in < 2 seconds
+- **Smart position sizing** — automatic lot calculation based on balance, SL distance, risk %
+- **All order types** — market, limit, stop (BUY and SELL)
 - **Multiple take profits** — split positions across up to 3 TP levels
-- **Risk calculator** — preview trade risk before committing
+- **Risk calculator** — preview trade impact before executing
 
 ### Account Management
-- **Live dashboard** — check balance, equity, margin, open positions
-- **Trade history** — review past trades with P&L tracking
-- **Per-user settings** — customizable risk %, allowed symbols, notifications
-- **Multi-account** — each user connects their own MT5 account
+- **Live dashboard** — balance, equity, margin, open positions
+- **Trade history** — full P&L tracking with trade details
+- **Per-user settings** — customize risk %, allowed symbols, notifications
+- **Multi-account support** — connect multiple MT5 accounts (based on plan)
 
 ### Subscriptions & Payments
-- **Tiered plans** — Free, Basic, Pro, Enterprise with configurable limits
-- **Crypto payments** — pay with USDT (ERC-20) or BTC
-- **Auto-verification** — on-chain payment detection via Etherscan / Blockchain.info
-- **Unique amounts** — each payment uses a distinct amount for automatic matching
+- **Tiered plans** — Free (10 trades/day) to Enterprise (unlimited)
+- **Crypto payments** — USDT (ERC-20) or BTC
+- **Auto-verification** — on-chain payment detection
+- **Usage limits** — configurable per plan (trades/day, accounts, features)
 
 ### Admin
-- **User management** — view, ban, promote users
+- **User management** — view, ban, promote, monitor users
 - **Broadcast** — send announcements to all users
 - **System monitoring** — errors, performance, connection health
-- **Usage analytics** — trades per day, active users, revenue
-
-### Infrastructure
-- **Tonpo Gateway** — Rust/axum server, zero third-party trading APIs
-- **Tonpo Bridge** — C++ WebSocket bridge inside MT5
-- **Dual provisioning** — Docker (Wine+MT5) or Windows VPS via Tonpo Node Agent
-- **Zero inbound ports** — bridge and node agent connect outbound to gateway
-- **AES-256-GCM** — MT5 credential encryption at rest
-- **PostgreSQL** — persistent storage for users, accounts, tokens, audit logs
+- **Analytics** — trades per day, active users, revenue tracking
 
 ---
 
-## Architecture
+## Prerequisites
 
-```
-┌──────────────────────────────────────────────────────┐
-│                      Linux VPS                        │
-│                                                       │
-│  ┌──────────────┐    ┌───────────────┐    ┌────────┐ │
-│  │  Tonpo Bot    │───▶│ Tonpo Gateway │◀───│  PgSQL │ │
-│  │  (Python)     │    │ (Rust/axum)   │    │        │ │
-│  └──────────────┘    └──────┬────────┘    └────────┘ │
-│                             │                         │
-└─────────────────────────────┼─────────────────────────┘
-                              │  WSS (outbound)
-               ┌──────────────┴──────────────┐
-               │                              │
-        ┌──────▼──────┐              ┌────────▼──────┐
-        │ Docker+Wine  │              │  Windows VPS  │
-        │ Container    │              │  Tonpo Node   │
-        │ (MT5 + DLL)  │              │  (MT5 + DLL)  │
-        └─────────────┘              └───────────────┘
-```
+### Requirements
+
+- **Python 3.12+**
+- **PostgreSQL 16** — for users, trades, subscriptions, audit logs
+- **Redis 7** — for caching and rate limiting
+- **Telegram Bot Token** — get one from [@BotFather](https://t.me/BotFather)
+- **MT5 Account** — from any broker (demo or live account)
+
+### You Need Tonpo Running
+
+This bot uses the **Tonpo SDK** to execute trades. You need access to a running **Tonpo Gateway** instance:
+
+- See: [Tonpo Gateway Setup](https://github.com/TonpoLabs/CMG)
+- See: [Tonpo SDK (tonpo-py)](https://github.com/TonpoLabs/tonpo-py)
 
 ---
 
 ## Quick Start
-
-### Prerequisites
-
-- Python 3.12+
-- PostgreSQL 16
-- Redis 7
-- A Telegram Bot Token — get one from [@BotFather](https://t.me/BotFather)
-- A running [Tonpo Gateway](https://github.com/TonpoLabs/CMG) instance
-- At least one MT5 account with any broker
 
 ### 1. Clone & Install
 
@@ -143,7 +101,7 @@ cp .env.example .env
 nano .env
 ```
 
-**Required variables:**
+**Essential variables:**
 
 ```env
 # Telegram
@@ -156,12 +114,11 @@ DATABASE_URL=postgresql://tonpo:yourpassword@localhost:5432/tonpo_bot
 # Redis
 REDIS_URL=redis://localhost:6379/0
 
-# Security — generate these:
-# python3 -c "import base64, os; print(base64.urlsafe_b64encode(os.urandom(32)).decode())"
+# Security (generate with: python3 -c "import base64, os; print(base64.urlsafe_b64encode(os.urandom(32)).decode())")
 ENCRYPTION_KEY=your-32-byte-base64-key
 
-# Tonpo Gateway
-GATEWAY_HOST=gateway.cipherbridge.cloud
+# Tonpo Gateway (the service this bot uses)
+GATEWAY_HOST=your-tonpo-gateway-host.com
 GATEWAY_PORT=443
 GATEWAY_USE_SSL=true
 ```
@@ -180,40 +137,37 @@ sudo -u postgres psql -d tonpo_bot -c "GRANT ALL ON SCHEMA public TO tonpo;"
 make migrate
 ```
 
-### 5. Start Redis
+### 5. Start Services
 
 ```bash
-sudo apt install redis-server -y
-sudo systemctl enable --now redis-server
-```
+# PostgreSQL + Redis
+make start-services
 
-### 6. Start the Bot
-
-```bash
+# Start the bot (in new terminal)
 make run
 ```
 
-Open Telegram, find your bot, and send `/start`.
+Open Telegram, find your bot, send `/start`.
 
 ---
 
-## Bot Commands
+## Commands
 
 ### User Commands
 
 | Command | Description |
 |---|---|
 | `/start` | Welcome message and main menu |
-| `/register` | Connect your MT5 account to the gateway |
+| `/register` | Connect your MT5 account |
 | `/trade` | Place a new trade from a signal |
-| `/calculate` | Calculate position size and risk without executing |
+| `/calculate` | Calculate position size without executing |
 | `/balance` | Check live account balance and equity |
 | `/positions` | View all open positions |
 | `/history` | View trade history with P&L |
 | `/settings` | Configure risk %, symbols, notifications |
-| `/profile` | View your profile and stats |
+| `/profile` | View profile and stats |
 | `/upgrade` | View subscription plans and payment |
-| `/help` | Show commands and signal format examples |
+| `/help` | Show commands and signal format |
 
 ### Admin Commands
 
@@ -227,17 +181,20 @@ Open Telegram, find your bot, and send `/start`.
 
 ## Trade Signal Format
 
+Send signals in this format:
+
 ```
 BUY/SELL [LIMIT/STOP] SYMBOL
 Entry PRICE or NOW
 SL PRICE
 TP PRICE
-TP2 PRICE  (optional — up to 3 TPs)
+TP2 PRICE  (optional)
 TP3 PRICE  (optional)
 ```
 
-**Market order (execute immediately):**
+### Examples
 
+**Market order (execute immediately):**
 ```
 BUY GBPUSD
 Entry NOW
@@ -246,7 +203,6 @@ TP 1.26000
 ```
 
 **Limit order (execute at specific price):**
-
 ```
 SELL LIMIT EURUSD
 Entry 1.10500
@@ -255,8 +211,7 @@ TP1 1.10000
 TP2 1.09500
 ```
 
-**Multiple take profits (position split across TP levels):**
-
+**Multiple take profits:**
 ```
 BUY XAUUSD
 Entry NOW
@@ -280,16 +235,59 @@ TP3 2350.00
 | Priority support | — | — | ✅ | ✅ |
 | Price | Free | $9.99/mo | $29.99/mo | $99.99/mo |
 
-Payments accepted in **USDT (ERC-20)** and **BTC**. Plans activate automatically after on-chain confirmation.
+Payments accepted in **USDT (ERC-20)** and **BTC**. Automatic on-chain verification.
 
 ---
 
-## Environment Variables
+## How the Bot Works
+
+```
+User sends signal via Telegram
+        │
+        ▼
+Bot parses signal
+        │
+        ▼
+Bot calculates position size (smart risk management)
+        │
+        ▼
+Bot calls Tonpo SDK (tonpo-py)
+        │
+        ▼
+Tonpo Gateway executes on MT5
+        │
+        ▼
+Trade executed in < 2 seconds
+```
+
+### Registration Flow
+
+1. User sends `/register`
+2. Bot creates user on Tonpo Gateway (receives API key)
+3. User enters MT5 credentials
+4. Bot provisions account on Tonpo Gateway (credentials encrypted at rest)
+5. Bot stores only: `tonpo_api_key` and `tonpo_account_id`
+6. **MT5 password is never stored by bot**
+
+### Trade Execution Flow
+
+1. User sends trade signal
+2. Bot validates signal format
+3. Bot calculates position size (smart risk management)
+4. Bot calls Tonpo SDK with calculated parameters
+5. Tonpo Gateway executes trade on MT5
+6. Bot stores trade in database with result
+
+---
+
+## Configuration
+
+### Environment Variables
 
 | Variable | Required | Description |
 |---|---|---|
 | `BOT_TOKEN` | ✅ | Telegram Bot token from @BotFather |
-| `ADMIN_USER_IDS` | ✅ | Comma-separated Telegram user IDs for admins |
+| `ADMIN_USER_IDS` | ✅ | Comma-separated Telegram user IDs |
 | `DATABASE_URL` | ✅ | PostgreSQL connection string |
 | `REDIS_URL` | ✅ | Redis connection URL |
 | `ENCRYPTION_KEY` | ✅ | 32-byte base64 key for local encryption |
@@ -297,7 +295,7 @@ Payments accepted in **USDT (ERC-20)** and **BTC**. Plans activate automatically
 | `GATEWAY_PORT` | ✅ | `443` for SSL, `8080` for plain HTTP |
 | `GATEWAY_USE_SSL` | ✅ | `true` or `false` |
 | `GATEWAY_API_KEY_HEADER` | ❌ | Header name (default: `X-API-Key`) |
-| `WEBHOOK_MODE` | ❌ | `true` to use Telegram webhooks instead of polling |
+| `WEBHOOK_MODE` | ❌ | `true` for webhooks, `false` for polling |
 | `WEBHOOK_URL` | ❌ | Public HTTPS URL for webhook mode |
 | `LOG_LEVEL` | ❌ | `DEBUG` / `INFO` / `WARNING` (default: `INFO`) |
 
@@ -307,49 +305,56 @@ Payments accepted in **USDT (ERC-20)** and **BTC**. Plans activate automatically
 
 ```
 tonpo-bot/
-├── bot/
-│   ├── main.py              # Bot initialization + handler registration
-│   ├── handlers.py          # Command handlers (/start, /help, /balance…)
-│   ├── registration.py      # /register conversation flow
-│   ├── trading.py           # /trade conversation flow
-│   ├── settings.py          # /settings conversation flow
-│   ├── admin.py             # Admin dashboard + user management
-│   ├── callbacks.py         # Inline keyboard callback router
-│   ├── keyboards.py         # All inline keyboards
-│   ├── middleware.py        # Auth, rate limiting, error handling
-│   └── message_utils.py     # Safe message editing utilities
-├── gateway_client/
-│   ├── client.py            # tonpo-py SDK wrapper
-│   └── adapter.py           # Adapter layer for gateway integration
-├── services/
-│   ├── trade_executor.py    # Trade execution pipeline
-│   ├── signal_processor.py  # Signal parsing + validation
-│   ├── risk_service.py      # Position size calculation
-│   ├── payment.py           # Crypto payment processing
-│   ├── subscription.py      # Plan management
-│   ├── notification.py      # Telegram notifications
-│   ├── auth.py              # Authentication + encryption
-│   ├── analytics.py         # Usage tracking
-│   ├── cache.py             # Redis cache layer
-│   ├── monitoring.py        # Health + metrics
-│   └── queue.py             # Background task queue
-├── database/
-│   ├── models.py            # SQLAlchemy models
-│   ├── repositories.py      # Data access layer
-│   ├── database.py          # Connection management
-│   └── migrations/          # Alembic migrations
-├── core/
-│   ├── models.py            # TradeSignal, CalculatedTrade dataclasses
-│   ├── parser.py            # Signal text parser
-│   ├── validators.py        # Input validation
-│   └── exceptions.py        # Custom exceptions
-├── config/
-│   ├── settings.py          # Pydantic settings
-│   └── constants.py         # Pip multipliers, symbols, enums
-├── utils/
-│   └── formatters.py        # Message formatting helpers
-├── main.py                  # Entry point
-├── Makefile                 # Dev commands
+├── bot/                         # Bot and command handlers
+│   ├── main.py                  # Bot initialization
+│   ├── handlers.py              # Command handlers (/start, /help, etc.)
+│   ├── registration.py          # /register conversation flow
+│   ├── trading.py               # /trade conversation flow
+│   ├── settings.py              # /settings conversation flow
+│   ├── admin.py                 # Admin dashboard
+│   ├── callbacks.py             # Inline keyboard callbacks
+│   ├── keyboards.py             # Telegram keyboards
+│   ├── middleware.py            # Auth, rate limiting, error handling
+│   └── message_utils.py         # Message editing utilities
+│
+├── gateway_client/              # Tonpo SDK integration
+│   ├── client.py                # tonpo-py SDK wrapper
+│   └── adapter.py               # Adapter layer for gateway
+│
+├── services/                    # Business logic
+│   ├── trade_executor.py        # Trade execution pipeline
+│   ├── signal_processor.py      # Signal parsing + validation
+│   ├── risk_service.py          # Position size calculation
+│   ├── payment.py               # Crypto payment processing
+│   ├── subscription.py          # Plan/quota management
+│   ├── notification.py          # Telegram notifications
+│   ├── auth.py                  # Auth + encryption
+│   ├── analytics.py             # Usage tracking
+│   ├── cache.py                 # Redis caching
+│   ├── monitoring.py            # Health + metrics
+│   └── queue.py                 # Background task queue
+│
+├── database/                    # Data access
+│   ├── models.py                # SQLAlchemy models
+│   ├── repositories.py          # Data access layer
+│   ├── database.py              # Connection management
+│   └── migrations/              # Alembic migrations
+│
+├── core/                        # Core business models
+│   ├── models.py                # TradeSignal, CalculatedTrade dataclasses
+│   ├── parser.py                # Signal text parser
+│   ├── validators.py            # Input validation
+│   └── exceptions.py            # Custom exceptions
+│
+├── config/                      # Configuration
+│   ├── settings.py              # Pydantic settings
+│   └── constants.py             # Constants, enums, multipliers
+│
+├── utils/                       # Utilities
+│   └── formatters.py            # Message formatting
+│
+├── main.py                      # Entry point
+├── Makefile                     # Development commands
 ├── requirements.txt
 ├── alembic.ini
 └── .env.example
@@ -357,75 +362,14 @@ tonpo-bot/
 
 ---
 
-## How the Gateway Integration Works
+## Development
 
-The bot uses the **tonpo-py** SDK to communicate with the Tonpo Gateway. The gateway owns the MT5 credentials — the bot never stores or transmits them after registration.
-
-**Registration flow (once per user):**
-
-```python
-# 1. Create a gateway user — get api_key
-user = await gateway.create_user()
-
-# 2. Provision MT5 account — gateway encrypts and stores credentials
-account = await gateway.create_account(mt5_login, mt5_password, mt5_server)
-
-# 3. Wait for MT5 to connect (2–4 minutes on Windows VPS cold start)
-await gateway.wait_for_active(account.account_id, timeout=180)
-
-# Store in bot DB — credentials never needed again
-db.save(user_id, tonpo_api_key=user.api_key, tonpo_account_id=account.account_id)
-```
-
-**Trade execution (every trade):**
-
-```python
-# Look up stored credentials
-row = db.get(telegram_id)
-
-# Execute via tonpo-py
-result = await gateway.place_market_buy("EURUSD", volume=calculated_lots)
-```
-
-The bot database stores only `tonpo_api_key` and `tonpo_account_id` — never the MT5 password.
-
----
-
-## Database Migrations
-
-```bash
-# Apply all pending migrations
-make migrate
-
-# Create a new migration after changing models
-make create-migration message="add subscription table"
-
-# Roll back one migration
-alembic downgrade -1
-```
-
----
-
-## Security
-
-| Layer | Implementation |
-|---|---|
-| **MT5 credentials** | Encrypted with AES-256-GCM on the gateway — bot never stores the password |
-| **Bot database** | Stores `tonpo_api_key` and `tonpo_account_id` only |
-| **API key auth** | SHA-256 hashed on gateway, sent as `X-API-Key` header |
-| **Rate limiting** | Per-user, per-IP, configurable by subscription tier |
-| **Input validation** | All user input sanitized before processing |
-| **Zero inbound ports** | MT5 bridge and node agent connect outbound to gateway |
-| **TLS** | All gateway communication over HTTPS/WSS |
-
----
-
-## Makefile Commands
+### Makefile Commands
 
 ```bash
 make run              # Start the bot (polling mode)
 make migrate          # Run database migrations
-make create-migration # Create a new Alembic migration
+make create-migration # Create new Alembic migration
 make install          # Install/update dependencies
 make test             # Run test suite
 make lint             # Run linters (ruff, mypy)
@@ -435,14 +379,29 @@ make start-services   # Start PostgreSQL + Redis
 make status           # Check service status
 ```
 
+### Database Migrations
+
+```bash
+# Apply pending migrations
+make migrate
+
+# Create new migration after changing models
+make create-migration message="add subscription table"
+
+# Roll back one migration
+alembic downgrade -1
+```
+
 ---
 
-## Running as a System Service
+## Deployment
+
+### As a System Service
 
 ```bash
 sudo tee /etc/systemd/system/tonpo-bot.service << 'EOF'
 [Unit]
-Description=Tonpo Telegram Bot
+Description=Tonpo Bot
 After=network.target postgresql.service redis.service
 
 [Service]
@@ -460,11 +419,195 @@ EOF
 
 sudo systemctl daemon-reload
 sudo systemctl enable --now tonpo-bot
-sudo journalctl -u tonpo-bot -f
+sudo journalctl -u tonpo-bot -f   # View logs
 ```
+
+---
+
+## Troubleshooting
+
+### Bot doesn't respond to commands
+
+**Check:**
+- Bot token is correct in `.env`
+- Bot is running: `ps aux | grep python`
+- Check logs: `journalctl -u tonpo-bot -f`
+
+```bash
+# Restart
+systemctl restart tonpo-bot
+```
+
+### Trades execute slowly (> 2 seconds)
+
+**Check:**
+- Gateway connection: `ping $GATEWAY_HOST`
+- Gateway is responsive
+- Redis is running: `redis-cli ping`
+- Network latency to gateway
+
+```bash
+# Enable debug logging
+LOG_LEVEL=DEBUG make run
+```
+
+### Database migration fails
+
+**Check:**
+- PostgreSQL is running: `sudo systemctl status postgresql`
+- Database user exists: `sudo -u postgres psql -l`
+- Connection string is correct
+- User has permissions
+
+```bash
+# Verify connection
+psql $DATABASE_URL -c "SELECT 1"
+```
+
+### "Cannot connect to Tonpo Gateway"
+
+**Check:**
+- `GATEWAY_HOST` and `GATEWAY_PORT` in `.env`
+- Gateway is running and accessible
+- SSL setting matches (`GATEWAY_USE_SSL`)
+- Firewall allows outbound on that port
+
+```bash
+# Test connection
+nc -zv $GATEWAY_HOST $GATEWAY_PORT
+```
+
+### Memory usage is high
+
+**Check:**
+- Redis memory: `redis-cli INFO memory`
+- Python process: `ps aux | grep python`
+- Database connections: `psql $DATABASE_URL -c "SELECT count(*) FROM pg_stat_activity;"`
+
+```bash
+# Clear Redis cache
+redis-cli FLUSHDB
+```
+
+### Trades are rejected by gateway
+
+**Check:**
+- Account balance sufficient
+- Symbol is tradeable on broker
+- Stop loss and take profit are valid
+- Risk % configuration
+
+Enable debug logging to see error details:
+```bash
+LOG_LEVEL=DEBUG make run
+```
+
+---
+
+## Security
+
+| Layer | Implementation |
+|---|---|
+| **MT5 credentials** | Never stored by bot — encrypted on Tonpo Gateway |
+| **Bot database** | Stores only `tonpo_api_key` and `tonpo_account_id` |
+| **API authentication** | API key sent as `X-API-Key` header to gateway |
+| **Rate limiting** | Per-user, per-IP, configurable by plan |
+| **Input validation** | All user input sanitized before processing |
+| **Encryption at rest** | Sensitive data encrypted with AES-256-GCM |
+| **TLS/HTTPS** | All communication with gateway over HTTPS/WSS |
+
+---
+
+## Examples
+
+### Example 1: Setting Risk %
+
+```
+User: /settings
+Bot: What's your risk % per trade? (e.g., 2 for 2%)
+User: 2
+Bot: ✅ Risk set to 2%
+```
+
+Now when user sends a trade signal, bot automatically calculates lots based on:
+- Account balance
+- Stop loss distance
+- Risk % (2%)
+
+### Example 2: Forex Scalping
+
+```
+User sends signal:
+  BUY EURUSD
+  Entry NOW
+  SL 1.09500
+  TP 1.09600
+
+Bot:
+  1. Calculates: balance=$1000, SL dist=100 pips, risk=2% → buy 0.20 lots
+  2. Executes BUY 0.20 EURUSD
+  3. Sets SL at 1.09500
+  4. Sets TP at 1.09600
+  5. Sends confirmation to user
+```
+
+### Example 3: Multi-TP Strategy
+
+```
+User sends signal:
+  BUY XAUUSD
+  Entry NOW
+  SL 2280.00
+  TP1 2310.00
+  TP2 2330.00
+  TP3 2350.00
+
+Bot:
+  1. Calculates total lots needed: 0.60 lots
+  2. Splits: 0.20 lots → TP1, 0.20 → TP2, 0.20 → TP3
+  3. Executes three limit sell orders at different prices
+  4. Tracks P&L as each level fills
+```
+
+---
+
+## Support & Resources
+
+### Getting Help
+
+- **Documentation** — https://docs.tonpo.cloud/
+- **Tonpo SDK** — https://github.com/TonpoLabs/tonpo-py
+- **Report Issues** — https://github.com/TonpoLabs/tonpo-bot/issues
+- **Discussions** — https://github.com/TonpoLabs/tonpo-bot/discussions
+
+### Related Projects
+
+- **Tonpo Gateway** — https://github.com/TonpoLabs/CMG
+- **Tonpo SDK (Python)** — https://github.com/TonpoLabs/tonpo-py
+- **Tonpo Node Agent** — https://github.com/TonpoLabs/CNA
+
+---
+
+## Contributing
+
+We welcome contributions! Please:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+See `CONTRIBUTING.md` for guidelines.
 
 ---
 
 ## License
 
-Proprietary — All rights reserved. © Tonpo. Unauthorised copying, distribution, or use is strictly prohibited.
+Proprietary — All rights reserved. © Tonpo. Unauthorized copying, distribution, or use is strictly prohibited.
+
+---
+
+## Disclaimer
+
+**This bot is for educational and development purposes.** It is not financial advice. Forex trading carries risk. Always test thoroughly in demo mode before using with real money. The author assumes no responsibility for trading losses.
