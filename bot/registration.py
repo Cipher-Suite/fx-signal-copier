@@ -33,7 +33,8 @@ class RegistrationHandler:
     
     async def initialize(self):
         """Initialize the execution provider"""
-        await self.execution_provider.initialize(self.gateway_config)
+        from config.settings import settings
+        await self.execution_provider.initialize(settings.gateway_config)
     
     async def start(self, update: Update, context: CallbackContext) -> int:
         """Start the registration process"""

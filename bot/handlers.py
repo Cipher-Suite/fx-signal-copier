@@ -57,7 +57,7 @@ class CommandHandlers:
             	
         else:
             message = (
-                "🚀 *Welcome to FX Signal Copier!*\n\n"
+                "🚀 *Welcome to Tonpo Bot!*\n\n"
                 "I help you execute forex trades directly from Telegram "
                 "to your MetaTrader 5 account.\n\n"
                 "To get started, use /register to connect your MT5 account.\n"
@@ -75,7 +75,7 @@ class CommandHandlers:
     async def help(self, update: Update, context: CallbackContext):
         """Handle /help command"""
         help_text = (
-            "*📚 FX Signal Copier Commands*\n\n"
+            "*📚 Tonpo Bot Commands*\n\n"
             "*Getting Started:*\n"
             "/register - Connect your MT5 account\n"
             "/settings - Configure your preferences\n\n"

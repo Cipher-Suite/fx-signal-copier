@@ -1,4 +1,4 @@
-# fx/bot/main.py
+# fx/bot/utils.py
 import re
 import html
 from typing import Dict, Any, List, Optional

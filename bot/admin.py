@@ -41,8 +41,8 @@ class AdminHandler:
         """Show admin dashboard (admin check done by wrap_admin middleware)"""
         
         # Get quick stats
-        total_users = self.user_repo.get_active_users().__len__()
-        trades_today = self.trade_repo.get_recent_trades(hours=24).__len__()
+        total_users = len(self.user_repo.get_active_users())
+        trades_today = len(self.trade_repo.get_recent_trades(hours=24))
         system_health = self.monitoring.get_system_health()
         
         dashboard_text = (

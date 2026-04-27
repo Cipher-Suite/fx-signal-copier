@@ -621,7 +621,9 @@ class Bot:
         users = repo.get_users_needing_connection_check(minutes=30)
         for user in users:
             try:
-                await self.mt5_manager.get_connection(user.telegram_id)
+                if not self.execution_provider:
+                    return
+                await self.execution_provider.get_connection(user.telegram_id)
             except Exception as e:
                 logger.warning(f"Connection check failed for user {user.telegram_id}: {e}")
                 await self.notification.send_telegram(
@@ -658,9 +660,9 @@ class Bot:
         if settings.USE_WEBHOOK:
             self.application.run_webhook(
                 listen="0.0.0.0",
-                port=settings.PORT,
+                port=settings.WEBHOOK_PORT,
                 url_path=settings.BOT_TOKEN,
-                webhook_url=f"{settings.APP_URL}/{settings.BOT_TOKEN}",
+                webhook_url=f"{settings.WEBHOOK_URL}/{settings.BOT_TOKEN}",
             )
         else:
             self.application.run_polling(

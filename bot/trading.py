@@ -9,7 +9,6 @@ from sqlalchemy.orm import Session
 
 from database.repositories import UserRepository
 from services.trade_executor import TradeExecutor
-from services.mt5_manager import MT5ConnectionManager
 from services.risk_service import RiskService
 from services.subscription import SubscriptionService
 from bot.keyboards import get_trade_confirmation_keyboard
